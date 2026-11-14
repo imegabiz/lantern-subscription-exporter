@@ -19,6 +19,8 @@ def build_profile(proxies, names):
     for proxy, name in zip(proxies, names):
         outbound = {"type": proxy.outbound["type"], "tag": name}
         outbound.update(copy.deepcopy({k: v for k, v in proxy.outbound.items() if k != "type"}))
+        if proxy.kind == "hysteria2":
+            outbound["tls"]["certificate"] = outbound["tls"]["certificate"].strip().split("\n")
         proxy_outbounds.append(outbound)
     profile = {
         "log": {"level": "warn", "timestamp": True},
@@ -56,7 +58,7 @@ def validate_profile(profile, expected_proxies):
     tags = [item.get("tag") for item in outbounds]
     if len(set(tags)) != len(tags) or any(not isinstance(tag, str) or not tag for tag in tags):
         raise ValidationError("profile tags are invalid or duplicated")
-    proxy_items = [item for item in outbounds if item.get("type") in ("shadowsocks", "vless")]
+    proxy_items = [item for item in outbounds if item.get("type") in ("shadowsocks", "vless", "hysteria2")]
     if len(proxy_items) != expected_proxies:
         raise ValidationError("profile proxy count mismatch")
     known = set(tags)
