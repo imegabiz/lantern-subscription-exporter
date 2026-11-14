@@ -1,4 +1,5 @@
 import re
+import ssl
 import uuid
 from dataclasses import dataclass, field
 
@@ -8,6 +9,9 @@ from .errors import ExtractionError
 UTILITY_TYPES = frozenset({"selector", "urltest", "direct", "block", "dns"})
 SHADOWSOCKS_KEYS = frozenset({"type", "tag", "server", "server_port", "method", "password"})
 VLESS_KEYS = frozenset({"type", "tag", "server", "server_port", "uuid", "flow", "tls", "network", "packet_encoding"})
+HYSTERIA2X_KEYS = frozenset({"type", "tag", "server", "server_port", "password", "tls", "pre_initial_junk"})
+HYSTERIA2X_TLS_KEYS = frozenset({"enabled", "server_name", "certificate"})
+MAX_CERTIFICATE_CHARS = 8192
 TLS_KEYS = frozenset({"enabled", "server_name", "utls", "reality"})
 UTLS_KEYS = frozenset({"enabled", "fingerprint"})
 REALITY_KEYS = frozenset({"enabled", "public_key", "short_id"})
@@ -147,9 +151,48 @@ def _normalize_vless(raw):
     return outbound
 
 
+def _normalize_certificate(value):
+    if isinstance(value, list) and value and all(isinstance(line, str) for line in value):
+        value = "\n".join(value)
+    if not isinstance(value, str) or not value.strip() or len(value) > MAX_CERTIFICATE_CHARS:
+        raise _Reject("invalid_certificate")
+    pem = value.strip() + "\n"
+    try:
+        ssl.PEM_cert_to_DER_cert(pem)
+    except ValueError:
+        raise _Reject("invalid_certificate")
+    return pem
+
+
+def _normalize_hysteria2x(raw):
+    _check_keys(raw, HYSTERIA2X_KEYS)
+    if raw.get("pre_initial_junk") not in (None, True, False):
+        raise _Reject("invalid_junk_flag")
+    tls = raw.get("tls")
+    if not isinstance(tls, dict):
+        raise _Reject("unsupported_options", "tls")
+    _check_keys(tls, HYSTERIA2X_TLS_KEYS)
+    if tls.get("enabled") is not True:
+        raise _Reject("tls_disabled")
+    if "certificate" not in tls:
+        raise _Reject("missing_certificate")
+    return {
+        "type": "hysteria2",
+        "server": _host(raw.get("server")),
+        "server_port": _port(raw.get("server_port")),
+        "password": _text(raw.get("password"), "invalid_password"),
+        "tls": {
+            "enabled": True,
+            "server_name": _host(tls.get("server_name")),
+            "certificate": _normalize_certificate(tls["certificate"]),
+        },
+    }
+
+
 NORMALIZERS = {
     "shadowsocks": _normalize_shadowsocks,
     "vless": _normalize_vless,
+    "hysteria2x": _normalize_hysteria2x,
 }
 
 
@@ -224,7 +267,7 @@ def extract(response):
             continue
         seen.add(identity)
         code, country, city = _location(locations, tag)
-        proxies.append(Proxy(kind=kind, outbound=outbound, country_code=code, country=country, city=city))
+        proxies.append(Proxy(kind=outbound["type"], outbound=outbound, country_code=code, country=country, city=city))
         if len(proxies) >= C.MAX_CONFIGS:
             break
     country = response.get("country")
