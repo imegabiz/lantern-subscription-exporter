@@ -67,4 +67,5 @@ SHADOWSOCKS_METHODS = (
 
 SUBSCRIPTION_LINKS_FILE = "sub.txt"
 SUBSCRIPTION_SINGBOX_FILE = "singbox.json"
+SUBSCRIPTION_XRAY_FILE = "xray.json"
 URLTEST_URL = "https://www.gstatic.com/generate_204"
