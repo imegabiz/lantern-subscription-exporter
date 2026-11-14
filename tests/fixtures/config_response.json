@@ -1,0 +1,120 @@
+{
+  "country": "IR",
+  "servers": [
+    {
+      "country": "Germany",
+      "city": "Frankfurt",
+      "latitude": 50.11,
+      "longitude": 8.68,
+      "country_code": "DE"
+    },
+    {
+      "country": "Netherlands",
+      "city": "Amsterdam",
+      "latitude": 52.3676,
+      "longitude": 4.9041,
+      "country_code": "NL"
+    }
+  ],
+  "outbound_locations": {
+    "hysteria2x-out-hysteria2x-linode-ams-8443-ir-free-1512f29c-2099-4b58-bc97-b77479c38acd": {
+      "country": "Netherlands",
+      "city": "Amsterdam",
+      "latitude": 52.3676,
+      "longitude": 4.9041,
+      "country_code": "NL"
+    },
+    "samizdat-out-samizdat-triangle-lightsail-fra-ir-free-c839adf0-476b-4b06-94b5-122d13e6fc10": {
+      "country": "Germany",
+      "city": "Frankfurt",
+      "latitude": 50.11,
+      "longitude": 8.68,
+      "country_code": "DE"
+    },
+    "samizdat-out-samizdat-triangle-lightsail-par-ir-free-6535e4b5-0347-481a-b230-77233a992639": {
+      "country": "Germany",
+      "city": "Frankfurt",
+      "latitude": 50.11,
+      "longitude": 8.68,
+      "country_code": "DE"
+    },
+    "shadowsocks-out-ss2022-triangle-lightsail-lon-ir-free-39925d47-12ab-4e3d-a054-1ca952d49f33": {
+      "country": "Germany",
+      "city": "Frankfurt",
+      "latitude": 50.11,
+      "longitude": 8.68,
+      "country_code": "DE"
+    },
+    "vless-out-vless-vision-triangle-lightsail-dub-ir-free-db91db4f-6cec-43d4-826e-301db8f97c1b": {
+      "country": "Germany",
+      "city": "Frankfurt",
+      "latitude": 50.11,
+      "longitude": 8.68,
+      "country_code": "DE"
+    }
+  },
+  "options": {
+    "outbounds": [
+      {
+        "type": "shadowsocks",
+        "tag": "shadowsocks-out-ss2022-triangle-lightsail-lon-ir-free-39925d47-12ab-4e3d-a054-1ca952d49f33",
+        "server": "192.0.2.11",
+        "server_port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+      },
+      {
+        "type": "vless",
+        "tag": "vless-out-vless-vision-triangle-lightsail-dub-ir-free-db91db4f-6cec-43d4-826e-301db8f97c1b",
+        "server": "192.0.2.12",
+        "server_port": 443,
+        "uuid": "11111111-2222-4333-8444-555555555555",
+        "flow": "xtls-rprx-vision",
+        "tls": {
+          "enabled": true,
+          "server_name": "www.amazon.com",
+          "utls": {
+            "enabled": true,
+            "fingerprint": "chrome"
+          },
+          "reality": {
+            "enabled": true,
+            "public_key": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+          }
+        }
+      },
+      {
+        "type": "samizdat",
+        "tag": "samizdat-out-samizdat-triangle-lightsail-fra-ir-free-c839adf0-476b-4b06-94b5-122d13e6fc10",
+        "server": "192.0.2.13",
+        "server_port": 5942,
+        "public_key": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+        "short_id": "0011223344556677",
+        "server_name": "jumia.com.ng"
+      },
+      {
+        "type": "hysteria2x",
+        "tag": "hysteria2x-out-hysteria2x-linode-ams-8443-ir-free-1512f29c-2099-4b58-bc97-b77479c38acd",
+        "server": "192.0.2.14",
+        "server_port": 8443,
+        "password": "fakepassword",
+        "tls": {
+          "enabled": true,
+          "server_name": "api.push.apple.com",
+          "certificate": "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----\n"
+        },
+        "pre_initial_junk": true
+      },
+      {
+        "type": "samizdat",
+        "tag": "samizdat-out-samizdat-triangle-lightsail-par-ir-free-6535e4b5-0347-481a-b230-77233a992639",
+        "server": "192.0.2.15",
+        "server_port": 37183,
+        "public_key": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+        "short_id": "0011223344556677",
+        "server_name": "nanoreview.net"
+      }
+    ]
+  },
+  "poll_interval_seconds": 180
+}
