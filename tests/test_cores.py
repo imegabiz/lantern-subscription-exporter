@@ -159,8 +159,11 @@ def reality_outbound(port, public):
 
 def pin_route(profile, tag_prefix, listen_port):
     target_tag = next(o["tag"] for o in profile["outbounds"] if o["type"] in ("shadowsocks", "vless", "hysteria2"))
-    profile["route"]["final"] = target_tag
-    profile["inbounds"][0]["listen_port"] = listen_port
+    profile["route"] = {"final": target_tag}
+    profile.pop("dns", None)
+    profile["inbounds"] = [
+        {"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": listen_port}
+    ]
     return profile
 
 
@@ -553,3 +556,40 @@ def test_hiddify_parsed_hysteria2_link_connects(tmp_path, procs, target):
     spawn(procs, [SING_BOX, "run", "-c", config], tmp_path)
     wait_port(client_port)
     assert fetch_through(client_port, target) == BODY
+
+
+@need_hiddify
+def test_hiddify_keeps_every_generated_outbound_and_builds_its_own_inbounds(tmp_path):
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(
+        tmp_path,
+        [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
+    )
+    source = json.loads((out / "singbox.json").read_text(encoding="utf-8"))
+    built = tmp_path / "hiddify_built.json"
+    subprocess.run(
+        [HIDDIFY, "build", "-c", str(out / "singbox.json"), "-o", str(built)],
+        check=True,
+        capture_output=True,
+        env=hiddify_env(),
+        cwd=str(tmp_path),
+        timeout=60,
+    )
+    result = json.loads(built.read_text(encoding="utf-8"))
+    wanted = {o["tag"]: o for o in source["outbounds"] if o["type"] in ("shadowsocks", "vless", "hysteria2")}
+    kept = {o["tag"]: o for o in result["outbounds"] if o["tag"] in wanted}
+    assert kept == wanted
+    assert "tun-in" not in [i.get("tag") for i in result["inbounds"]]
+
+
+@need_singbox
+def test_tun_profile_passes_singbox_check_with_hysteria2_and_all_protocols(tmp_path):
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(
+        tmp_path,
+        [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
+    )
+    profile = json.loads((out / "singbox.json").read_text(encoding="utf-8"))
+    assert any(i["type"] == "tun" for i in profile["inbounds"])
+    result = subprocess.run([SING_BOX, "check", "-c", str(out / "singbox.json")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
