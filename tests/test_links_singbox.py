@@ -136,3 +136,36 @@ def test_profile_embeds_hysteria2_certificate_as_lines(proxies):
     assert hy2["tls"]["server_name"] == "api.push.apple.com"
     assert "insecure" not in hy2["tls"]
     assert proxies[2].outbound["tls"]["certificate"].startswith("-----BEGIN")
+
+
+def test_profile_is_a_complete_client_profile_with_tun(proxies):
+    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    profile = build_profile(proxies, names)
+    tun = [i for i in profile["inbounds"] if i["type"] == "tun"]
+    assert len(tun) == 1 and tun[0]["auto_route"] is True
+    assert profile["dns"]["final"] == "dns-remote"
+    assert profile["dns"]["servers"][0]["detour"] == "Lantern"
+    actions = [rule.get("action") for rule in profile["route"]["rules"]]
+    assert actions[0] == "sniff" and "hijack-dns" in actions
+    assert profile["route"]["auto_detect_interface"] is True
+
+
+def test_profile_without_tun_is_rejected(proxies):
+    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    profile = build_profile(proxies, names)
+    profile["inbounds"] = [{"type": "mixed", "tag": "m", "listen": "127.0.0.1", "listen_port": 1}]
+    with pytest.raises(ValidationError):
+        validate_profile(profile, 3)
+
+
+def test_profile_with_dangling_dns_or_rule_is_rejected(proxies):
+    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    profile = build_profile(proxies, names)
+    broken = json.loads(json.dumps(profile))
+    broken["dns"]["final"] = "nope"
+    with pytest.raises(ValidationError):
+        validate_profile(broken, 3)
+    broken = json.loads(json.dumps(profile))
+    broken["route"]["rules"][2]["outbound"] = "nope"
+    with pytest.raises(ValidationError):
+        validate_profile(broken, 3)
