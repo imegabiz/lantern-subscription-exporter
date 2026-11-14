@@ -7,6 +7,8 @@ from .errors import ValidationError
 SELECTOR_TAG = "Lantern"
 URLTEST_TAG = "Lantern Auto"
 DIRECT_TAG = "direct"
+TUN_TAG = "tun-in"
+DNS_REMOTE_TAG = "dns-remote"
 RESERVED_TAGS = (SELECTOR_TAG, URLTEST_TAG, DIRECT_TAG)
 
 
@@ -24,8 +26,22 @@ def build_profile(proxies, names):
         proxy_outbounds.append(outbound)
     profile = {
         "log": {"level": "warn", "timestamp": True},
+        "dns": {
+            "servers": [
+                {"type": "https", "tag": DNS_REMOTE_TAG, "server": "1.1.1.1", "detour": SELECTOR_TAG}
+            ],
+            "final": DNS_REMOTE_TAG,
+            "strategy": "ipv4_only",
+        },
         "inbounds": [
-            {"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 2080}
+            {
+                "type": "tun",
+                "tag": TUN_TAG,
+                "address": ["172.19.0.1/30"],
+                "auto_route": True,
+                "strict_route": True,
+                "stack": "mixed",
+            }
         ],
         "outbounds": [
             {
@@ -45,7 +61,15 @@ def build_profile(proxies, names):
         ]
         + proxy_outbounds
         + [{"type": "direct", "tag": DIRECT_TAG}],
-        "route": {"final": SELECTOR_TAG},
+        "route": {
+            "rules": [
+                {"action": "sniff"},
+                {"protocol": "dns", "action": "hijack-dns"},
+                {"ip_is_private": True, "outbound": DIRECT_TAG},
+            ],
+            "final": SELECTOR_TAG,
+            "auto_detect_interface": True,
+        },
     }
     validate_profile(profile, len(proxies))
     return profile
@@ -67,8 +91,21 @@ def validate_profile(profile, expected_proxies):
             members = item.get("outbounds")
             if not members or not set(members) <= known:
                 raise ValidationError("selector or urltest references unknown outbounds")
-    if profile.get("route", {}).get("final") not in known:
+    route = profile.get("route", {})
+    if route.get("final") not in known:
         raise ValidationError("route final points to an unknown outbound")
+    for rule in route.get("rules", []):
+        if "outbound" in rule and rule["outbound"] not in known:
+            raise ValidationError("a route rule points to an unknown outbound")
+    if not any(item.get("type") == "tun" for item in profile.get("inbounds", [])):
+        raise ValidationError("profile has no tun inbound")
+    dns = profile.get("dns", {})
+    dns_tags = {server.get("tag") for server in dns.get("servers", [])}
+    if dns.get("final") not in dns_tags:
+        raise ValidationError("dns final points to an unknown server")
+    for server in dns.get("servers", []):
+        if server.get("detour") is not None and server["detour"] not in known:
+            raise ValidationError("a dns server detour points to an unknown outbound")
 
 
 def render_profile(profile):
