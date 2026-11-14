@@ -72,11 +72,18 @@ def run(client, state_path, output_dir, min_configs=C.MIN_CONFIGS):
             extraction.country,
             client.country,
         )
-    files = render(extraction, min_configs)
-    changed = write_files(Path(output_dir), files)
     kinds = {}
     for proxy in extraction.proxies:
         kinds[proxy.kind] = kinds.get(proxy.kind, 0) + 1
+    log.info(
+        "response: country=%s outbounds=%d usable=%s skipped=%s",
+        extraction.country or "unknown",
+        len(response.get("options", {}).get("outbounds", [])),
+        dict(sorted(kinds.items())) or "none",
+        dict(sorted(extraction.skipped.items())) or "none",
+    )
+    files = render(extraction, min_configs)
+    changed = write_files(Path(output_dir), files)
     return Result(
         count=len(extraction.proxies),
         changed=changed,
