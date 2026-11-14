@@ -69,3 +69,7 @@ SUBSCRIPTION_LINKS_FILE = "sub.txt"
 SUBSCRIPTION_SINGBOX_FILE = "singbox.json"
 SUBSCRIPTION_XRAY_FILE = "xray.json"
 URLTEST_URL = "https://www.gstatic.com/generate_204"
+
+PROFILE_NAME = "👽 Anonymous Lantern 🚀"
+URLTEST_NAME = "👽 Anonymous Lantern 🌐"
+IRAN_RULES_BASE_URL = "https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/"
