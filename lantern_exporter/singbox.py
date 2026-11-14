@@ -39,7 +39,6 @@ def build_profile(proxies, names):
                 "tag": TUN_TAG,
                 "address": ["172.19.0.1/30"],
                 "auto_route": True,
-                "strict_route": True,
                 "stack": "mixed",
             }
         ],
