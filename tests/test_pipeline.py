@@ -132,3 +132,19 @@ def test_user_creation_failure_surfaces(tmp_path, make_session, make_client):
     with pytest.raises(ApiError):
         run(make_client(make_session(user_status=503)), state_path, out)
     assert not out.exists() or not any(out.iterdir())
+
+
+def test_failure_still_logs_what_was_skipped_and_no_secrets(tmp_path, make_session, make_client, config_response, caplog):
+    import logging
+
+    state_path, out = paths(tmp_path)
+    config_response["options"]["outbounds"] = [
+        o for o in config_response["options"]["outbounds"] if o["type"] in ("samizdat", "hysteria2x")
+    ]
+    with caplog.at_level(logging.INFO, logger="lantern_exporter"):
+        with pytest.raises(ValidationError):
+            run(make_client(make_session(config=config_response)), state_path, out)
+    text = caplog.text
+    assert "country=IR" in text and "outbounds=3" in text
+    assert "unsupported_type:samizdat" in text and "unsupported_type:hysteria2x" in text
+    assert "fakepassword" not in text and "secret-token-value" not in text
