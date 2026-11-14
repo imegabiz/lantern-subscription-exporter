@@ -8,10 +8,14 @@ from lantern_exporter.extract import extract
 
 def test_real_shape_keeps_standard_and_skips_custom(config_response):
     result = extract(config_response)
-    assert [p.kind for p in result.proxies] == ["shadowsocks", "vless"]
-    assert result.skipped == {"unsupported_type:samizdat": 2, "unsupported_type:hysteria2x": 1}
+    assert [p.kind for p in result.proxies] == ["shadowsocks", "vless", "hysteria2"]
+    assert result.skipped == {"unsupported_type:samizdat": 2}
     assert result.country == "IR"
-    ss, vless = result.proxies
+    ss, vless, hy2 = result.proxies
+    assert hy2.outbound["type"] == "hysteria2"
+    assert hy2.outbound["tls"]["server_name"] == "api.push.apple.com"
+    assert hy2.outbound["tls"]["certificate"].startswith("-----BEGIN CERTIFICATE-----")
+    assert "pre_initial_junk" not in hy2.outbound
     assert ss.outbound["method"] == "2022-blake3-chacha20-poly1305"
     assert vless.outbound["flow"] == "xtls-rprx-vision"
     assert vless.outbound["tls"]["reality"]["public_key"]
@@ -43,7 +47,7 @@ def test_utility_outbounds_are_ignored_silently(config_response):
 def test_shadowsocks_rejections(config_response, mutate, reason):
     mutate(config_response["options"]["outbounds"][0])
     result = extract(config_response)
-    assert [p.kind for p in result.proxies] == ["vless"]
+    assert [p.kind for p in result.proxies] == ["vless", "hysteria2"]
     assert result.skipped[reason] == 1
 
 
@@ -66,7 +70,7 @@ def test_shadowsocks_rejections(config_response, mutate, reason):
 def test_vless_rejections(config_response, mutate, reason):
     mutate(config_response["options"]["outbounds"][1])
     result = extract(config_response)
-    assert [p.kind for p in result.proxies] == ["shadowsocks"]
+    assert [p.kind for p in result.proxies] == ["shadowsocks", "hysteria2"]
     assert result.skipped[reason] == 1
 
 
@@ -81,7 +85,7 @@ def test_duplicates_are_removed(config_response):
     outbounds.append(copy.deepcopy(outbounds[0]))
     outbounds[-1]["tag"] = "other-tag"
     result = extract(config_response)
-    assert len(result.proxies) == 2
+    assert len(result.proxies) == 3
     assert result.skipped["duplicate:shadowsocks"] == 1
 
 
@@ -100,7 +104,7 @@ def test_structural_failures(payload):
 def test_garbage_entries_do_not_crash(config_response):
     config_response["options"]["outbounds"] += ["x", 5, None, {"tag": "t"}, {"type": 5}]
     result = extract(config_response)
-    assert len(result.proxies) == 2
+    assert len(result.proxies) == 3
     assert result.skipped["not_an_object"] == 3
     assert result.skipped["missing_type"] == 2
 
@@ -113,3 +117,43 @@ def test_unknown_keys_are_named_in_the_reason_without_values(config_response):
     reasons = [r for r in result.skipped if r.startswith("unsupported_options:shadowsocks")]
     assert reasons == ["unsupported_options:shadowsocks(keys=bad?key?,domain_resolver)"]
     assert "secret-value" not in str(result.skipped)
+
+
+def _hysteria2x(config_response):
+    return next(o for o in config_response["options"]["outbounds"] if o["type"] == "hysteria2x")
+
+
+@pytest.mark.parametrize(
+    "mutate,reason",
+    [
+        (lambda o: o["tls"].pop("certificate"), "missing_certificate:hysteria2x"),
+        (lambda o: o["tls"].update(certificate="not a pem"), "invalid_certificate:hysteria2x"),
+        (lambda o: o["tls"].update(certificate=""), "invalid_certificate:hysteria2x"),
+        (lambda o: o["tls"].update(certificate=["x"]), "invalid_certificate:hysteria2x"),
+        (lambda o: o["tls"].update(enabled=False), "tls_disabled:hysteria2x"),
+        (lambda o: o["tls"].pop("server_name"), "invalid_server:hysteria2x"),
+        (lambda o: o["tls"].update(insecure=True), "unsupported_options:hysteria2x(keys=insecure)"),
+        (lambda o: o.update(obfs={"type": "salamander"}), "unsupported_options:hysteria2x(keys=obfs)"),
+        (lambda o: o.update(password=""), "invalid_password:hysteria2x"),
+        (lambda o: o.update(server_port=70000), "invalid_port:hysteria2x"),
+        (lambda o: o.update(pre_initial_junk="yes"), "invalid_junk_flag:hysteria2x"),
+    ],
+)
+def test_hysteria2x_rejections(config_response, mutate, reason):
+    mutate(_hysteria2x(config_response))
+    result = extract(config_response)
+    assert [p.kind for p in result.proxies] == ["shadowsocks", "vless"]
+    assert result.skipped[reason] == 1
+
+
+def test_hysteria2x_certificate_given_as_lines_is_accepted(config_response):
+    outbound = _hysteria2x(config_response)
+    outbound["tls"]["certificate"] = outbound["tls"]["certificate"].strip().split("\n")
+    hy2 = extract(config_response).proxies[2]
+    assert hy2.outbound["tls"]["certificate"].endswith("-----END CERTIFICATE-----\n")
+
+
+def test_hysteria2x_junk_flag_is_dropped_not_required(config_response):
+    outbound = _hysteria2x(config_response)
+    outbound["pre_initial_junk"] = False
+    assert [p.kind for p in extract(config_response).proxies][-1] == "hysteria2"
