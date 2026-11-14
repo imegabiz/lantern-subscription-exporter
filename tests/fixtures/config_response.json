@@ -101,7 +101,7 @@
         "tls": {
           "enabled": true,
           "server_name": "api.push.apple.com",
-          "certificate": "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----\n"
+          "certificate": "-----BEGIN CERTIFICATE-----\nMIIBrDCCAVSgAwIBAgIUBxleywwfUXiewkuUyOrK7JiziMEwCgYIKoZIzj0EAwIw\nHTEbMBkGA1UEAwwSYXBpLnB1c2guYXBwbGUuY29tMB4XDTI2MTExNDEyNTEyN1oX\nDTM2MTExMTEyNTEyN1owHTEbMBkGA1UEAwwSYXBpLnB1c2guYXBwbGUuY29tMFkw\nEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEokgeZve+aZERBn2I48r4JLU97Wummx7G\n8LxhWd904t6EVc77QhZctIj8X8Cmh2Zc0Qk9yb6/QFCJZLIiB38E86NyMHAwHQYD\nVR0OBBYEFNGJUBuHOrSI00cYgwj8VRcbnoxoMB8GA1UdIwQYMBaAFNGJUBuHOrSI\n00cYgwj8VRcbnoxoMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0RBBYwFIISYXBpLnB1\nc2guYXBwbGUuY29tMAoGCCqGSM49BAMCA0YAMEMCIA9dZqfv7ypAVJJaMzYkqROS\nZG/4npqbAcip9tC0cyeNAh9phcSeGL+Y+I3E+uJzATMWoRmKxNld5IqsSc4+J8DP\n-----END CERTIFICATE-----\n"
         },
         "pre_initial_junk": true
       },
