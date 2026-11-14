@@ -18,12 +18,18 @@ def test_full_run_writes_files_and_state(tmp_path, make_session, make_client):
     session = make_session()
     result = run(make_client(session), state_path, out)
     assert result.count == 3 and result.kinds == {"shadowsocks": 1, "vless": 1, "hysteria2": 1}
-    assert sorted(result.changed) == ["singbox.json", "sub.txt"]
+    assert sorted(result.changed) == ["singbox.json", "sub.txt", "xray.json"]
     links = (out / "sub.txt").read_text(encoding="utf-8").splitlines()
     assert len(links) == 3
     assert [link.split("://")[0] for link in links] == ["ss", "vless", "hysteria2"]
     profile = json.loads((out / "singbox.json").read_text(encoding="utf-8"))
     assert len([o for o in profile["outbounds"] if o["type"] in ("shadowsocks", "vless", "hysteria2")]) == 3
+    xray = json.loads((out / "xray.json").read_text(encoding="utf-8"))
+    assert [o["protocol"] for o in xray["outbounds"] if o["tag"].startswith("lantern-")] == [
+        "shadowsocks",
+        "vless",
+        "hysteria",
+    ]
     state = load_state(state_path)
     assert state.user_id == 424242 and state.token == "secret-token-value"
     assert [c["url"].rsplit("/", 1)[1] for c in session.calls] == ["user-create", "config-new"]
@@ -43,7 +49,7 @@ def test_rotated_config_updates_files(tmp_path, make_session, make_client, confi
     run(make_client(make_session()), state_path, out)
     config_response["options"]["outbounds"][0]["server"] = "192.0.2.99"
     result = run(make_client(make_session(config=config_response)), state_path, out)
-    assert sorted(result.changed) == ["singbox.json", "sub.txt"]
+    assert sorted(result.changed) == ["singbox.json", "sub.txt", "xray.json"]
     assert "@192.0.2.99:443" in (out / "sub.txt").read_text(encoding="utf-8")
 
 
