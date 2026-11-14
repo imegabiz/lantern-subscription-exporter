@@ -39,6 +39,13 @@ class _Reject(Exception):
     pass
 
 
+def _check_keys(raw, allowed):
+    extra = sorted(set(raw) - allowed)
+    if extra:
+        names = ",".join(re.sub(r"[^A-Za-z0-9_-]", "?", str(key))[:24] for key in extra[:6])
+        raise _Reject("unsupported_options", "keys=" + names)
+
+
 def _host(value):
     if not isinstance(value, str) or not value or not HOST.match(value):
         raise _Reject("invalid_server")
@@ -58,8 +65,7 @@ def _text(value, reason):
 
 
 def _normalize_shadowsocks(raw):
-    if not set(raw) <= SHADOWSOCKS_KEYS:
-        raise _Reject("unsupported_options")
+    _check_keys(raw, SHADOWSOCKS_KEYS)
     method = _text(raw.get("method"), "invalid_method")
     if method not in C.SHADOWSOCKS_METHODS:
         raise _Reject("unsupported_method")
@@ -73,8 +79,9 @@ def _normalize_shadowsocks(raw):
 
 
 def _normalize_tls(raw):
-    if not isinstance(raw, dict) or not set(raw) <= TLS_KEYS:
-        raise _Reject("unsupported_options")
+    if not isinstance(raw, dict):
+        raise _Reject("unsupported_options", "tls")
+    _check_keys(raw, TLS_KEYS)
     if raw.get("enabled") is not True:
         raise _Reject("tls_disabled")
     tls = {"enabled": True}
@@ -83,8 +90,9 @@ def _normalize_tls(raw):
         tls["server_name"] = _host(server_name)
     utls = raw.get("utls")
     if utls is not None:
-        if not isinstance(utls, dict) or not set(utls) <= UTLS_KEYS:
-            raise _Reject("unsupported_options")
+        if not isinstance(utls, dict):
+            raise _Reject("unsupported_options", "utls")
+        _check_keys(utls, UTLS_KEYS)
         if utls.get("enabled") is True:
             fingerprint = utls.get("fingerprint")
             if fingerprint not in FINGERPRINTS:
@@ -92,8 +100,9 @@ def _normalize_tls(raw):
             tls["utls"] = {"enabled": True, "fingerprint": fingerprint}
     reality = raw.get("reality")
     if reality is not None:
-        if not isinstance(reality, dict) or not set(reality) <= REALITY_KEYS:
-            raise _Reject("unsupported_options")
+        if not isinstance(reality, dict):
+            raise _Reject("unsupported_options", "reality")
+        _check_keys(reality, REALITY_KEYS)
         if reality.get("enabled") is True:
             public_key = reality.get("public_key")
             if not isinstance(public_key, str) or not REALITY_PUBLIC_KEY.match(public_key):
@@ -113,8 +122,7 @@ def _normalize_tls(raw):
 
 
 def _normalize_vless(raw):
-    if not set(raw) <= VLESS_KEYS:
-        raise _Reject("unsupported_options")
+    _check_keys(raw, VLESS_KEYS)
     if raw.get("network") not in (None, "tcp"):
         raise _Reject("unsupported_transport")
     flow = raw.get("flow", "")
@@ -207,7 +215,8 @@ def extract(response):
         try:
             outbound = normalizer(raw)
         except _Reject as exc:
-            skip("%s:%s" % (exc.args[0], kind))
+            detail = "(%s)" % exc.args[1] if len(exc.args) > 1 else ""
+            skip("%s:%s%s" % (exc.args[0], kind, detail))
             continue
         identity = _identity(outbound)
         if identity in seen:
