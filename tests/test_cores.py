@@ -593,3 +593,117 @@ def test_tun_profile_passes_singbox_check_with_hysteria2_and_all_protocols(tmp_p
     assert any(i["type"] == "tun" for i in profile["inbounds"])
     result = subprocess.run([SING_BOX, "check", "-c", str(out / "singbox.json")], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def xray_client_from_generated(out, tmp_path, listen_port):
+    config = json.loads((out / "xray.json").read_text(encoding="utf-8"))
+    first = next(o["tag"] for o in config["outbounds"] if o["tag"].startswith("lantern-"))
+    config["inbounds"] = [{"tag": "http-in", "listen": "127.0.0.1", "port": listen_port, "protocol": "http"}]
+    config["routing"] = {"rules": [{"type": "field", "network": "tcp,udp", "outboundTag": first}]}
+    config.pop("observatory", None)
+    return write_json(tmp_path / "xray_generated_client.json", config)
+
+
+@need_xray
+def test_xray_accepts_the_generated_config_unchanged(tmp_path):
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(
+        tmp_path,
+        [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
+    )
+    result = subprocess.run([XRAY, "run", "-test", "-c", str(out / "xray.json")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Configuration OK" in result.stdout
+
+
+@need_xray
+def test_generated_xray_config_connects_ss2022(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    out = generate(tmp_path, [ss_outbound(server_port)])
+    spawn(procs, [XRAY, "run", "-c", xray_server_ss(tmp_path, server_port)], tmp_path)
+    wait_port(server_port)
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_xray
+def test_generated_xray_config_connects_vless_reality_vision(tmp_path, procs, target, tls_dest):
+    server_port, client_port = free_port(), free_port()
+    private, public = x25519()
+    out = generate(tmp_path, [reality_outbound(server_port, public)])
+    spawn(procs, [XRAY, "run", "-c", xray_server_reality(tmp_path, server_port, tls_dest, private)], tmp_path)
+    wait_port(server_port)
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_xray
+@need_singbox
+def test_generated_xray_config_connects_to_stock_hysteria2_server_with_noise(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    cert, key = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(server_port, cert.read_text())])
+    config = json.loads((out / "xray.json").read_text(encoding="utf-8"))
+    stream = config["outbounds"][0]["streamSettings"]
+    assert stream["finalmask"]["udp"][0]["type"] == "noise"
+    spawn(procs, [SING_BOX, "run", "-c", singbox_server_hysteria2(tmp_path, server_port, cert, key)], tmp_path)
+    time.sleep(2)
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_xray
+@need_singbox
+def test_generated_xray_config_rejects_a_server_with_another_certificate(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    trusted, _ = make_cert(tmp_path, "api.push.apple.com")
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    other_cert, other_key = make_cert(other_dir, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(server_port, trusted.read_text())])
+    spawn(procs, [SING_BOX, "run", "-c", singbox_server_hysteria2(other_dir, server_port, other_cert, other_key)], tmp_path)
+    time.sleep(2)
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    try:
+        body = fetch_through(client_port, target)
+    except requests.RequestException:
+        body = b""
+    assert body != BODY
+
+
+@need_xray
+def test_generated_xray_hysteria2_sends_a_short_junk_datagram_before_the_quic_initial(tmp_path, procs, target):
+    listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    listener.bind(("127.0.0.1", 0))
+    listener.settimeout(0.5)
+    server_port = listener.getsockname()[1]
+    client_port = free_port()
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(server_port, cert.read_text())])
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    trigger = threading.Thread(target=lambda: _quiet_fetch(client_port, target), daemon=True)
+    trigger.start()
+    sizes = []
+    deadline = time.time() + 6
+    while time.time() < deadline and len(sizes) < 3:
+        try:
+            data, _ = listener.recvfrom(65535)
+        except socket.timeout:
+            continue
+        sizes.append(len(data))
+    listener.close()
+    assert sizes, "no UDP datagram reached the listener"
+    assert 8 <= sizes[0] <= 64
+    assert any(size >= 1200 for size in sizes[1:])
+
+
+def _quiet_fetch(port, url):
+    try:
+        requests.get(url, proxies={"http": "http://127.0.0.1:%d" % port}, timeout=5)
+    except requests.RequestException:
+        pass
