@@ -36,8 +36,8 @@ def test_utility_outbounds_are_ignored_silently(config_response):
         (lambda o: o.update(server=""), "invalid_server:shadowsocks"),
         (lambda o: o.update(server="a b"), "invalid_server:shadowsocks"),
         (lambda o: o.update(method="rc4"), "unsupported_method:shadowsocks"),
-        (lambda o: o.update(plugin="obfs"), "unsupported_options:shadowsocks"),
-        (lambda o: o.update(multiplex={"enabled": True}), "unsupported_options:shadowsocks"),
+        (lambda o: o.update(plugin="obfs"), "unsupported_options:shadowsocks(keys=plugin)"),
+        (lambda o: o.update(multiplex={"enabled": True}), "unsupported_options:shadowsocks(keys=multiplex)"),
     ],
 )
 def test_shadowsocks_rejections(config_response, mutate, reason):
@@ -58,7 +58,7 @@ def test_shadowsocks_rejections(config_response, mutate, reason):
         (lambda o: o["tls"].pop("server_name"), "reality_without_sni:vless"),
         (lambda o: o["tls"].pop("utls"), "reality_without_utls:vless"),
         (lambda o: o["tls"].update(enabled=False), "tls_disabled:vless"),
-        (lambda o: o["tls"].update(insecure=True), "unsupported_options:vless"),
+        (lambda o: o["tls"].update(insecure=True), "unsupported_options:vless(keys=insecure)"),
         (lambda o: o["tls"]["utls"].update(fingerprint="weird"), "invalid_fingerprint:vless"),
         (lambda o: o.pop("tls"), "flow_without_tls:vless"),
     ],
@@ -103,3 +103,13 @@ def test_garbage_entries_do_not_crash(config_response):
     assert len(result.proxies) == 2
     assert result.skipped["not_an_object"] == 3
     assert result.skipped["missing_type"] == 2
+
+
+def test_unknown_keys_are_named_in_the_reason_without_values(config_response):
+    outbound = config_response["options"]["outbounds"][0]
+    outbound["domain_resolver"] = "secret-value"
+    outbound["bad key!"] = 1
+    result = extract(config_response)
+    reasons = [r for r in result.skipped if r.startswith("unsupported_options:shadowsocks")]
+    assert reasons == ["unsupported_options:shadowsocks(keys=bad?key?,domain_resolver)"]
+    assert "secret-value" not in str(result.skipped)
