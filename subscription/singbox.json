@@ -32,8 +32,9 @@
       "tag": "Lantern",
       "outbounds": [
         "Lantern Auto",
-        "🇩🇪 Germany · Frankfurt · SS",
-        "🇳🇱 Netherlands · Amsterdam · HY2"
+        "🇳🇱 Netherlands · Amsterdam · HY2",
+        "🇩🇪 Germany · Frankfurt · VLESS",
+        "🇩🇪 Germany · Frankfurt · SS"
       ],
       "default": "Lantern Auto"
     },
@@ -41,20 +42,13 @@
       "type": "urltest",
       "tag": "Lantern Auto",
       "outbounds": [
-        "🇩🇪 Germany · Frankfurt · SS",
-        "🇳🇱 Netherlands · Amsterdam · HY2"
+        "🇳🇱 Netherlands · Amsterdam · HY2",
+        "🇩🇪 Germany · Frankfurt · VLESS",
+        "🇩🇪 Germany · Frankfurt · SS"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
       "tolerance": 50
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS",
-      "server": "3.71.19.239",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
     },
     {
       "type": "hysteria2",
@@ -80,6 +74,34 @@
           "-----END CERTIFICATE-----"
         ]
       }
+    },
+    {
+      "type": "vless",
+      "tag": "🇩🇪 Germany · Frankfurt · VLESS",
+      "server": "34.245.28.249",
+      "server_port": 443,
+      "uuid": "fad6c240-14d0-47ce-9264-21c5f18689c1",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.amazon.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "ZODw0ijKEfbSpHjvQqTyYzsbLpnlnA3j9Io5PfmZ-Ts"
+        }
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
+      "server": "47.245.132.133",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
     },
     {
       "type": "direct",
