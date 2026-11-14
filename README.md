@@ -9,11 +9,14 @@ A small Python job that asks the Lantern config service for the free proxy list,
 | `subscription/sub.txt` | One share link per line (`ss://`, `vless://`) | v2rayNG, Hiddify, NekoBox, Streisand and other link-based clients |
 | `subscription/singbox.json` | Complete sing-box client profile: TUN inbound, DNS, routing rules, a selector and an automatic latency test group | Official sing-box apps (Android, iOS, desktop), Hiddify (JSON profile import) |
 
+| `subscription/xray.json` | Complete Xray-core client configuration: SOCKS (10808) and HTTP (10809) inbounds, all proxies, a latency-based balancer | Xray-core and clients that accept a full Xray JSON configuration |
+
 After setup, the subscription URLs are:
 
 ```
 https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/sub.txt
 https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/singbox.json
+https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/xray.json
 ```
 
 Hiddify reads only the proxy entries from `singbox.json` and builds its own inbounds, DNS and routing, so the extra sections do not affect it. The official sing-box apps need the TUN inbound to start the VPN.
@@ -27,6 +30,8 @@ Lantern serves several proxy protocols. Only the ones that mainstream clients un
 - Hysteria2, from Lantern's `hysteria2x` entries
 
 `hysteria2x` is stock Hysteria2 plus a client-side evasion (`pre_initial_junk`). Lantern documents it as a drop-in client for an unmodified Hysteria2 server, so the exporter publishes it as a normal `hysteria2` entry without the evasion. The server certificate is self-signed. In `singbox.json` the certificate is embedded and verified. Share links cannot carry a certificate, so they use `insecure=1` together with `pinSHA256`; clients that ignore the pin accept any certificate for that connection.
+
+In `xray.json` the Hysteria2 entry pins the server certificate (`pinnedPeerCertSha256`) and uses Xray's `finalmask` UDP `noise` to send one random 8 to 64 byte datagram before the QUIC Initial. This reproduces Lantern's `pre_initial_junk` evasion, which stock sing-box and share links cannot do.
 
 Lantern's own protocols (for example `samizdat`) cannot be used by Hiddify, v2rayNG or stock sing-box and are skipped on purpose. Every run prints how many entries were skipped and why.
 
