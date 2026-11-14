@@ -39,9 +39,7 @@ def main(argv=None):
         logging.getLogger("lantern_exporter").error("update failed, previous output kept: %s", exc)
         return 1
     log = logging.getLogger("lantern_exporter")
-    log.info("usable configs: %d %s", result.count, dict(sorted(result.kinds.items())))
-    log.info("skipped: %s", dict(sorted(result.skipped.items())) or "none")
-    log.info("server country: %s", result.response_country or "unknown")
+    log.info("usable configs: %d", result.count)
     log.info("files changed: %s", result.changed or "none")
     return 0
 
