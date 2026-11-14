@@ -7,7 +7,14 @@ import pytest
 from lantern_exporter.errors import ValidationError
 from lantern_exporter.extract import extract
 from lantern_exporter.links import build_link, certificate_pin, check_link, display_name, flag, unique_names
-from lantern_exporter.singbox import build_profile, render_profile, validate_profile
+from lantern_exporter.singbox import (
+    RESERVED_TAGS,
+    SELECTOR_TAG,
+    URLTEST_TAG,
+    build_profile,
+    render_profile,
+    validate_profile,
+)
 
 
 @pytest.fixture
@@ -68,14 +75,15 @@ def test_ipv6_host_is_bracketed(proxies):
 
 
 def test_profile_structure(proxies):
-    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
     profile = build_profile(proxies, names)
     outbounds = {o["tag"]: o for o in profile["outbounds"]}
-    assert outbounds["Lantern"]["default"] == "Lantern Auto"
-    assert outbounds["Lantern Auto"]["outbounds"] == names
+    assert outbounds[SELECTOR_TAG]["default"] == URLTEST_TAG
+    assert outbounds[SELECTOR_TAG]["outbounds"] == [URLTEST_TAG] + names
+    assert outbounds[URLTEST_TAG]["outbounds"] == names
     assert outbounds[names[0]]["type"] == "shadowsocks"
     assert outbounds[names[1]]["tls"]["reality"]["enabled"] is True
-    assert profile["route"]["final"] == "Lantern"
+    assert profile["route"]["final"] == SELECTOR_TAG
     assert json.loads(render_profile(profile)) == profile
 
 
@@ -85,7 +93,7 @@ def test_profile_rejects_inconsistent_input(proxies):
     with pytest.raises(ValidationError):
         build_profile(proxies, ["a", "a"])
     with pytest.raises(ValidationError):
-        build_profile(proxies, ["Lantern", "b"])
+        build_profile(proxies, [SELECTOR_TAG, "b"])
     with pytest.raises(ValidationError):
         build_profile([], [])
 
@@ -128,7 +136,7 @@ def test_hysteria2_link_tampering_is_detected(proxies):
 
 
 def test_profile_embeds_hysteria2_certificate_as_lines(proxies):
-    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
     profile = build_profile(proxies, names)
     hy2 = next(o for o in profile["outbounds"] if o["type"] == "hysteria2")
     lines = hy2["tls"]["certificate"]
@@ -139,19 +147,19 @@ def test_profile_embeds_hysteria2_certificate_as_lines(proxies):
 
 
 def test_profile_is_a_complete_client_profile_with_tun(proxies):
-    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
     profile = build_profile(proxies, names)
     tun = [i for i in profile["inbounds"] if i["type"] == "tun"]
     assert len(tun) == 1 and tun[0]["auto_route"] is True
     assert profile["dns"]["final"] == "dns-remote"
-    assert profile["dns"]["servers"][0]["detour"] == "Lantern"
+    assert profile["dns"]["servers"][0]["detour"] == SELECTOR_TAG
     actions = [rule.get("action") for rule in profile["route"]["rules"]]
     assert actions[0] == "sniff" and "hijack-dns" in actions
     assert profile["route"]["auto_detect_interface"] is True
 
 
 def test_profile_without_tun_is_rejected(proxies):
-    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
     profile = build_profile(proxies, names)
     profile["inbounds"] = [{"type": "mixed", "tag": "m", "listen": "127.0.0.1", "listen_port": 1}]
     with pytest.raises(ValidationError):
@@ -159,7 +167,7 @@ def test_profile_without_tun_is_rejected(proxies):
 
 
 def test_profile_with_dangling_dns_or_rule_is_rejected(proxies):
-    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
     profile = build_profile(proxies, names)
     broken = json.loads(json.dumps(profile))
     broken["dns"]["final"] = "nope"
@@ -167,5 +175,50 @@ def test_profile_with_dangling_dns_or_rule_is_rejected(proxies):
         validate_profile(broken, 3)
     broken = json.loads(json.dumps(profile))
     broken["route"]["rules"][2]["outbound"] = "nope"
+    with pytest.raises(ValidationError):
+        validate_profile(broken, 3)
+
+
+def test_group_names_follow_the_tcb_convention(proxies):
+    assert SELECTOR_TAG == "\U0001F47D Anonymous Lantern \U0001F680"
+    assert URLTEST_TAG == "\U0001F47D Anonymous Lantern \U0001F310"
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
+    profile = build_profile(proxies, names)
+    kinds = {o["tag"]: o["type"] for o in profile["outbounds"]}
+    assert kinds[SELECTOR_TAG] == "selector" and kinds[URLTEST_TAG] == "urltest"
+
+
+def test_iran_split_routing_dns_and_cache(proxies):
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
+    profile = build_profile(proxies, names)
+    route = profile["route"]
+    sets = {item["tag"]: item for item in route["rule_set"]}
+    assert set(sets) == {"geosite-ir", "geoip-ir"}
+    for item in sets.values():
+        assert item["type"] == "remote" and item["format"] == "binary"
+        assert item["url"].startswith("https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/")
+        assert item["http_client"] == {"detour": "direct"}
+    iran_rule = route["rules"][3]
+    assert iran_rule == {"rule_set": ["geosite-ir", "geoip-ir"], "outbound": "direct"}
+    assert profile["dns"]["rules"] == [{"rule_set": ["geosite-ir"], "server": "dns-direct"}]
+    direct = next(o for o in profile["outbounds"] if o["tag"] == "direct")
+    assert direct == {"type": "direct", "tag": "direct", "domain_resolver": "dns-direct"}
+    assert "default_domain_resolver" not in route
+    assert profile["experimental"]["cache_file"]["enabled"] is True
+
+
+def test_unknown_rule_set_or_dns_server_is_rejected(proxies):
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
+    profile = build_profile(proxies, names)
+    broken = json.loads(json.dumps(profile))
+    broken["route"]["rules"][3]["rule_set"] = ["geosite-nope"]
+    with pytest.raises(ValidationError):
+        validate_profile(broken, 3)
+    broken = json.loads(json.dumps(profile))
+    broken["dns"]["rules"][0]["server"] = "nope"
+    with pytest.raises(ValidationError):
+        validate_profile(broken, 3)
+    broken = json.loads(json.dumps(profile))
+    next(o for o in broken["outbounds"] if o["tag"] == "direct")["domain_resolver"] = "nope"
     with pytest.raises(ValidationError):
         validate_profile(broken, 3)
