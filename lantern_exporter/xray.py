@@ -22,6 +22,8 @@ PRIVATE_RANGES = (
     "fc00::/7",
     "fe80::/10",
 )
+IRAN_DOMAINS = ("domain:ir", "geosite:category-ir")
+IRAN_IPS = ("geoip:ir",)
 SNIFFING = {"enabled": True, "destOverride": ["http", "tls"], "routeOnly": True}
 
 
@@ -115,6 +117,7 @@ def build_config(proxies):
         outbounds.append(outbound)
     first_tag = outbounds[0]["tag"]
     config = {
+        "remarks": C.PROFILE_NAME,
         "log": {"loglevel": "warning"},
         "inbounds": [
             {
@@ -150,6 +153,8 @@ def build_config(proxies):
             ],
             "rules": [
                 {"type": "field", "ip": list(PRIVATE_RANGES), "outboundTag": DIRECT_TAG},
+                {"type": "field", "domain": list(IRAN_DOMAINS), "outboundTag": DIRECT_TAG},
+                {"type": "field", "ip": list(IRAN_IPS), "outboundTag": DIRECT_TAG},
                 {"type": "field", "network": "tcp,udp", "balancerTag": BALANCER_TAG},
             ],
         },
@@ -190,6 +195,8 @@ def validate_config(config, expected_proxies):
             raise ValidationError("a routing rule points to an unknown balancer")
     if not config.get("inbounds"):
         raise ValidationError("xray config has no inbounds")
+    if not isinstance(config.get("remarks"), str) or not config["remarks"].strip():
+        raise ValidationError("xray config has no remarks")
 
 
 def render_config(config):
