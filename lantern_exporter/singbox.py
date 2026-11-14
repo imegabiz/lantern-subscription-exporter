@@ -4,12 +4,25 @@ import json
 from . import constants as C
 from .errors import ValidationError
 
-SELECTOR_TAG = "Lantern"
-URLTEST_TAG = "Lantern Auto"
+SELECTOR_TAG = C.PROFILE_NAME
+URLTEST_TAG = C.URLTEST_NAME
 DIRECT_TAG = "direct"
 TUN_TAG = "tun-in"
 DNS_REMOTE_TAG = "dns-remote"
+DNS_DIRECT_TAG = "dns-direct"
+RULE_SET_SITE_TAG = "geosite-ir"
+RULE_SET_IP_TAG = "geoip-ir"
 RESERVED_TAGS = (SELECTOR_TAG, URLTEST_TAG, DIRECT_TAG)
+
+
+def _rule_set(tag, file_name):
+    return {
+        "type": "remote",
+        "tag": tag,
+        "format": "binary",
+        "url": C.IRAN_RULES_BASE_URL + file_name,
+        "http_client": {"detour": DIRECT_TAG},
+    }
 
 
 def build_profile(proxies, names):
@@ -28,8 +41,10 @@ def build_profile(proxies, names):
         "log": {"level": "warn", "timestamp": True},
         "dns": {
             "servers": [
-                {"type": "https", "tag": DNS_REMOTE_TAG, "server": "1.1.1.1", "detour": SELECTOR_TAG}
+                {"type": "https", "tag": DNS_REMOTE_TAG, "server": "1.1.1.1", "detour": SELECTOR_TAG},
+                {"type": "udp", "tag": DNS_DIRECT_TAG, "server": "8.8.8.8"},
             ],
+            "rules": [{"rule_set": [RULE_SET_SITE_TAG], "server": DNS_DIRECT_TAG}],
             "final": DNS_REMOTE_TAG,
             "strategy": "ipv4_only",
         },
@@ -59,16 +74,22 @@ def build_profile(proxies, names):
             },
         ]
         + proxy_outbounds
-        + [{"type": "direct", "tag": DIRECT_TAG}],
+        + [{"type": "direct", "tag": DIRECT_TAG, "domain_resolver": DNS_DIRECT_TAG}],
         "route": {
             "rules": [
                 {"action": "sniff"},
                 {"protocol": "dns", "action": "hijack-dns"},
                 {"ip_is_private": True, "outbound": DIRECT_TAG},
+                {"rule_set": [RULE_SET_SITE_TAG, RULE_SET_IP_TAG], "outbound": DIRECT_TAG},
+            ],
+            "rule_set": [
+                _rule_set(RULE_SET_SITE_TAG, "geosite-ir.srs"),
+                _rule_set(RULE_SET_IP_TAG, "geoip-ir.srs"),
             ],
             "final": SELECTOR_TAG,
             "auto_detect_interface": True,
         },
+        "experimental": {"cache_file": {"enabled": True}},
     }
     validate_profile(profile, len(proxies))
     return profile
@@ -93,15 +114,24 @@ def validate_profile(profile, expected_proxies):
     route = profile.get("route", {})
     if route.get("final") not in known:
         raise ValidationError("route final points to an unknown outbound")
+    rule_sets = {item.get("tag") for item in route.get("rule_set", [])}
     for rule in route.get("rules", []):
         if "outbound" in rule and rule["outbound"] not in known:
             raise ValidationError("a route rule points to an unknown outbound")
+        if not set(rule.get("rule_set", [])) <= rule_sets:
+            raise ValidationError("a route rule uses an unknown rule set")
+    direct = next((item for item in outbounds if item.get("tag") == DIRECT_TAG), {})
+    if direct.get("domain_resolver") not in {s.get("tag") for s in profile.get("dns", {}).get("servers", [])}:
+        raise ValidationError("the direct outbound has no valid domain resolver")
     if not any(item.get("type") == "tun" for item in profile.get("inbounds", [])):
         raise ValidationError("profile has no tun inbound")
     dns = profile.get("dns", {})
     dns_tags = {server.get("tag") for server in dns.get("servers", [])}
     if dns.get("final") not in dns_tags:
         raise ValidationError("dns final points to an unknown server")
+    for rule in dns.get("rules", []):
+        if rule.get("server") not in dns_tags or not set(rule.get("rule_set", [])) <= rule_sets:
+            raise ValidationError("a dns rule points to an unknown server or rule set")
     for server in dns.get("servers", []):
         if server.get("detour") is not None and server["detour"] not in known:
             raise ValidationError("a dns server detour points to an unknown outbound")
