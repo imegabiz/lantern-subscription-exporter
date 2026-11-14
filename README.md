@@ -22,8 +22,11 @@ Lantern serves several proxy protocols. Only the ones that mainstream clients un
 
 - Shadowsocks (including the 2022 ciphers)
 - VLESS with TCP, Reality and `xtls-rprx-vision`
+- Hysteria2, from Lantern's `hysteria2x` entries
 
-Lantern's own protocols (for example `samizdat` and `hysteria2x`) cannot be used by Hiddify, v2rayNG or stock sing-box and are skipped on purpose. Every run prints how many entries were skipped and why.
+`hysteria2x` is stock Hysteria2 plus a client-side evasion (`pre_initial_junk`). Lantern documents it as a drop-in client for an unmodified Hysteria2 server, so the exporter publishes it as a normal `hysteria2` entry without the evasion. The server certificate is self-signed. In `singbox.json` the certificate is embedded and verified. Share links cannot carry a certificate, so they use `insecure=1` together with `pinSHA256`; clients that ignore the pin accept any certificate for that connection.
+
+Lantern's own protocols (for example `samizdat`) cannot be used by Hiddify, v2rayNG or stock sing-box and are skipped on purpose. Every run prints how many entries were skipped and why.
 
 An entry is also skipped when it carries options the exporter cannot express in a share link without changing its meaning. Nothing is guessed or rewritten.
 
@@ -79,6 +82,7 @@ The offline suite uses recorded response shapes with fake credentials and needs 
 
 ## Limitations
 
+- The server decides which protocol types a request receives and changes them between requests. A run can contain no usable type at all. That run fails and the previous files stay in place.
 - Lantern hands out proxies per client and per network location and rotates them. Entries can stop working or change at any time, and an entry that works for one network may not work for another.
 - A public subscription sends many users to the same few servers. Expect them to be slower or to be blocked sooner than with a personal account.
 - This project depends on an unofficial use of Lantern's service endpoints and may stop working if Lantern changes them.
