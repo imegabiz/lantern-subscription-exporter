@@ -84,6 +84,9 @@ def test_routing_balancer_observatory_and_inbounds(config):
     assert routing["balancers"][0]["fallbackTag"] == "lantern-01-ss"
     assert routing["balancers"][0]["strategy"] == {"type": "leastPing"}
     assert routing["rules"][0]["outboundTag"] == "direct"
+    assert routing["rules"][1] == {"type": "field", "domain": ["domain:ir", "geosite:category-ir"], "outboundTag": "direct"}
+    assert routing["rules"][2] == {"type": "field", "ip": ["geoip:ir"], "outboundTag": "direct"}
+    assert routing["domainStrategy"] == "AsIs"
     assert routing["rules"][-1]["balancerTag"] == "lantern-balancer"
     assert config["observatory"]["subjectSelector"] == ["lantern-"]
     assert [(i["protocol"], i["port"]) for i in config["inbounds"]] == [("socks", 10808), ("http", 10809)]
@@ -120,3 +123,15 @@ def test_validation_catches_broken_configs(config):
         validate_config(broken, 3)
     with pytest.raises(ValidationError):
         validate_config(config, 2)
+
+
+def test_remarks_name_the_config_like_tcb(config):
+    assert config["remarks"] == "\U0001F47D Anonymous Lantern \U0001F680"
+    assert list(config)[0] == "remarks"
+
+
+def test_missing_remarks_is_rejected(config):
+    broken = json.loads(json.dumps(config))
+    broken["remarks"] = " "
+    with pytest.raises(ValidationError):
+        validate_config(broken, 3)
