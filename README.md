@@ -7,7 +7,7 @@ A small Python job that asks the Lantern config service for the free proxy list,
 | File | Content | Use in |
 | --- | --- | --- |
 | `subscription/sub.txt` | One share link per line (`ss://`, `vless://`) | v2rayNG, Hiddify, NekoBox, Streisand and other link-based clients |
-| `subscription/singbox.json` | Complete sing-box profile with a selector and an automatic latency test group | sing-box, Hiddify (JSON profile import) |
+| `subscription/singbox.json` | Complete sing-box client profile: TUN inbound, DNS, routing rules, a selector and an automatic latency test group | Official sing-box apps (Android, iOS, desktop), Hiddify (JSON profile import) |
 
 After setup, the subscription URLs are:
 
@@ -15,6 +15,8 @@ After setup, the subscription URLs are:
 https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/sub.txt
 https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/singbox.json
 ```
+
+Hiddify reads only the proxy entries from `singbox.json` and builds its own inbounds, DNS and routing, so the extra sections do not affect it. The official sing-box apps need the TUN inbound to start the VPN.
 
 ## What is included and what is not
 
