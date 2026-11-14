@@ -21,6 +21,21 @@ https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/xray
 
 Hiddify reads only the proxy entries from `singbox.json` and builds its own inbounds, DNS and routing, so the extra sections do not affect it. The official sing-box apps need the TUN inbound to start the VPN.
 
+## Naming and routing
+
+The configs carry the same naming scheme as the TCB project:
+
+- `xray.json`: `remarks` is `👽 Anonymous Lantern 🚀`, which Xray based clients show as the config name.
+- `singbox.json`: the selector is `👽 Anonymous Lantern 🚀` and the automatic latency group is `👽 Anonymous Lantern 🌐`.
+- `sub.txt`: every link has its own name, for example `🇩🇪 Germany · Frankfurt · SS`.
+
+Clients that name a remote subscription from the URL or from HTTP headers (Hiddify uses `Profile-Title`, the file name or the URL fragment) cannot read the name from the JSON itself. Add `#👽 Anonymous Lantern 🚀` to the end of the subscription URL there.
+
+Iranian traffic goes direct in `singbox.json` and `xray.json`, as in TCB: private networks, `.ir` domains, `geosite-ir` and `geoip-ir`.
+
+- `singbox.json` downloads two rule sets from `raw.githubusercontent.com` (the same host that serves the subscription) on the first start and caches them. If that host is unreachable at the very first start, sing-box refuses to start.
+- `xray.json` uses the standard `geosite:category-ir` and `geoip:ir` tags. The client needs the usual `geoip.dat` and `geosite.dat` files. Bare Xray-core without them refuses to load the config.
+
 ## What is included and what is not
 
 Lantern serves several proxy protocols. Only the ones that mainstream clients understand are exported:
@@ -85,7 +100,7 @@ python -m pip install -r requirements-dev.txt
 python -m pytest -v
 ```
 
-The offline suite uses recorded response shapes with fake credentials and needs no network. The integration tests in `tests/test_cores.py` are skipped unless the binaries are available. To run them, set `XRAY_BIN`, `SING_BOX_BIN` and `HIDDIFY_BIN` to the paths of Xray-core, sing-box and hiddify-core. They validate the generated files with the real cores and push traffic through local loopback servers.
+The offline suite uses recorded response shapes with fake credentials and needs no network. The integration tests in `tests/test_cores.py` are skipped unless the binaries are available. To run them, set `XRAY_BIN`, `SING_BOX_BIN` and `HIDDIFY_BIN` to the paths of Xray-core, sing-box and hiddify-core. They validate the generated files with the real cores and push traffic through local loopback servers. Set `XRAY_ASSET_DIR` to a directory containing `geoip.dat` and `geosite.dat` to include the test of the full Xray config.
 
 ## Limitations
 
