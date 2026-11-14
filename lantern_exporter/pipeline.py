@@ -9,6 +9,7 @@ from .links import build_link, unique_names
 from .output import write_files
 from .singbox import RESERVED_TAGS, build_profile, render_profile
 from .state import load_state, save_state
+from .xray import build_config as build_xray_config, render_config as render_xray_config
 
 log = logging.getLogger("lantern_exporter")
 
@@ -58,6 +59,7 @@ def render(extraction, min_configs):
     return {
         C.SUBSCRIPTION_LINKS_FILE: ("\n".join(links) + "\n").encode("utf-8"),
         C.SUBSCRIPTION_SINGBOX_FILE: render_profile(profile),
+        C.SUBSCRIPTION_XRAY_FILE: render_xray_config(build_xray_config(proxies)),
     }
 
 
