@@ -158,7 +158,7 @@ def reality_outbound(port, public):
 
 
 def pin_route(profile, tag_prefix, listen_port):
-    target_tag = next(o["tag"] for o in profile["outbounds"] if o["type"] in ("shadowsocks", "vless"))
+    target_tag = next(o["tag"] for o in profile["outbounds"] if o["type"] in ("shadowsocks", "vless", "hysteria2"))
     profile["route"]["final"] = target_tag
     profile["inbounds"][0]["listen_port"] = listen_port
     return profile
@@ -318,9 +318,83 @@ def singbox_keypair():
     return private, public
 
 
+def make_cert(tmp_path, name):
+    cert = tmp_path / "hy2-cert.pem"
+    key = tmp_path / "hy2-key.pem"
+    subprocess.run(
+        [
+            "openssl", "req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1",
+            "-nodes", "-keyout", str(key), "-out", str(cert), "-days", "2", "-subj", "/CN=" + name,
+            "-addext", "subjectAltName=DNS:" + name,
+        ],
+        check=True,
+        capture_output=True,
+    )
+    return cert, key
+
+
+def hysteria2x_outbound(port, pem):
+    return {
+        "type": "hysteria2x",
+        "tag": "hy2x-1",
+        "server": "127.0.0.1",
+        "server_port": port,
+        "password": "hy2-test-password",
+        "tls": {"enabled": True, "server_name": "api.push.apple.com", "certificate": pem},
+        "pre_initial_junk": True,
+    }
+
+
+def singbox_server_hysteria2(tmp_path, port, cert, key):
+    config = {
+        "log": {"level": "warn"},
+        "inbounds": [
+            {
+                "type": "hysteria2",
+                "tag": "in",
+                "listen": "127.0.0.1",
+                "listen_port": port,
+                "users": [{"password": "hy2-test-password"}],
+                "tls": {
+                    "enabled": True,
+                    "server_name": "api.push.apple.com",
+                    "certificate_path": str(cert),
+                    "key_path": str(key),
+                },
+            }
+        ],
+        "outbounds": [{"type": "direct", "tag": "direct"}],
+    }
+    return write_json(tmp_path / "sb_server_hy2.json", config)
+
+
+def hiddify_singbox_client_from_links(tmp_path, links_file, listen_port):
+    parsed = tmp_path / "hiddify_outbounds.json"
+    subprocess.run(
+        [HIDDIFY, "parse", str(links_file), "-o", str(parsed)],
+        check=True,
+        capture_output=True,
+        env=hiddify_env(),
+        cwd=str(tmp_path),
+        timeout=60,
+    )
+    outbound = json.loads(parsed.read_text(encoding="utf-8"))["outbounds"][0]
+    config = {
+        "log": {"level": "warn"},
+        "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": listen_port}],
+        "outbounds": [outbound, {"type": "direct", "tag": "direct"}],
+        "route": {"final": outbound["tag"]},
+    }
+    return write_json(tmp_path / "hiddify_client.json", config)
+
+
 @need_singbox
 def test_singbox_check_accepts_generated_profile(tmp_path):
-    out = generate(tmp_path, [ss_outbound(8388), reality_outbound(443, "A" * 43)])
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(
+        tmp_path,
+        [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
+    )
     result = subprocess.run([SING_BOX, "check", "-c", str(out / "singbox.json")], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
 
@@ -426,5 +500,56 @@ def test_xray_client_connects_to_singbox_vless_reality_vision(tmp_path, procs, t
     spawn(procs, [SING_BOX, "run", "-c", singbox_server_reality(tmp_path, server_port, tls_dest, private)], tmp_path)
     wait_port(server_port)
     spawn(procs, [XRAY, "run", "-c", xray_client_from_links(tmp_path, out / "sub.txt", client_port)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_singbox
+def test_singbox_client_with_pinned_certificate_connects_to_hysteria2_server(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    cert, key = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(server_port, cert.read_text())])
+    profile = pin_route(json.loads((out / "singbox.json").read_text(encoding="utf-8")), "", client_port)
+    hy2 = next(o for o in profile["outbounds"] if o["type"] == "hysteria2")
+    assert "insecure" not in hy2["tls"]
+    spawn(procs, [SING_BOX, "run", "-c", singbox_server_hysteria2(tmp_path, server_port, cert, key)], tmp_path)
+    time.sleep(2)
+    spawn(procs, [SING_BOX, "run", "-c", write_json(tmp_path / "sb_client.json", profile)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_singbox
+def test_pinned_certificate_client_rejects_a_server_with_another_certificate(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    trusted, _ = make_cert(tmp_path, "api.push.apple.com")
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    other_cert, other_key = make_cert(other_dir, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(server_port, trusted.read_text())])
+    profile = pin_route(json.loads((out / "singbox.json").read_text(encoding="utf-8")), "", client_port)
+    spawn(procs, [SING_BOX, "run", "-c", singbox_server_hysteria2(other_dir, server_port, other_cert, other_key)], tmp_path)
+    time.sleep(2)
+    spawn(procs, [SING_BOX, "run", "-c", write_json(tmp_path / "sb_client.json", profile)], tmp_path)
+    wait_port(client_port)
+    try:
+        body = fetch_through(client_port, target)
+    except requests.RequestException:
+        body = b""
+    assert body != BODY
+    client_log = (tmp_path / "proc-1.log").read_text(encoding="utf-8", errors="replace")
+    assert "unknown authority" in client_log
+
+
+@need_singbox
+@need_hiddify
+def test_hiddify_parsed_hysteria2_link_connects(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    cert, key = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(server_port, cert.read_text())])
+    spawn(procs, [SING_BOX, "run", "-c", singbox_server_hysteria2(tmp_path, server_port, cert, key)], tmp_path)
+    time.sleep(2)
+    config = hiddify_singbox_client_from_links(tmp_path, out / "sub.txt", client_port)
+    spawn(procs, [SING_BOX, "run", "-c", config], tmp_path)
     wait_port(client_port)
     assert fetch_through(client_port, target) == BODY
