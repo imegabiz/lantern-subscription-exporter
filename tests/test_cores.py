@@ -32,6 +32,12 @@ def binary(env_name, default):
 XRAY = binary("XRAY_BIN", "xray")
 SING_BOX = binary("SING_BOX_BIN", "sing-box")
 HIDDIFY = binary("HIDDIFY_BIN", "hiddify-core")
+GEO_ASSETS = os.environ.get("XRAY_ASSET_DIR")
+need_geo = pytest.mark.skipif(
+    not GEO_ASSETS or not (Path(GEO_ASSETS) / "geosite.dat").exists(), reason="geo assets not available"
+)
+
+
 need_xray = pytest.mark.skipif(XRAY is None, reason="xray binary not available")
 need_singbox = pytest.mark.skipif(SING_BOX is None, reason="sing-box binary not available")
 need_hiddify = pytest.mark.skipif(HIDDIFY is None, reason="hiddify-core binary not available")
@@ -161,6 +167,9 @@ def pin_route(profile, tag_prefix, listen_port):
     target_tag = next(o["tag"] for o in profile["outbounds"] if o["type"] in ("shadowsocks", "vless", "hysteria2"))
     profile["route"] = {"final": target_tag}
     profile.pop("dns", None)
+    profile.pop("experimental", None)
+    for outbound in profile["outbounds"]:
+        outbound.pop("domain_resolver", None)
     profile["inbounds"] = [
         {"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": listen_port}
     ]
@@ -605,13 +614,17 @@ def xray_client_from_generated(out, tmp_path, listen_port):
 
 
 @need_xray
+@need_geo
 def test_xray_accepts_the_generated_config_unchanged(tmp_path):
     cert, _ = make_cert(tmp_path, "api.push.apple.com")
     out = generate(
         tmp_path,
         [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
     )
-    result = subprocess.run([XRAY, "run", "-test", "-c", str(out / "xray.json")], capture_output=True, text=True)
+    env = dict(os.environ, XRAY_LOCATION_ASSET=GEO_ASSETS)
+    result = subprocess.run(
+        [XRAY, "run", "-test", "-c", str(out / "xray.json")], capture_output=True, text=True, env=env
+    )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "Configuration OK" in result.stdout
 
@@ -707,3 +720,61 @@ def _quiet_fetch(port, url):
         requests.get(url, proxies={"http": "http://127.0.0.1:%d" % port}, timeout=5)
     except requests.RequestException:
         pass
+
+
+def can_reach(host, port=443):
+    try:
+        with socket.create_connection((host, port), timeout=5):
+            return True
+    except OSError:
+        return False
+
+
+@need_singbox
+@pytest.mark.skipif(not can_reach("raw.githubusercontent.com"), reason="rule set host is not reachable")
+def test_full_singbox_profile_starts_downloads_rule_sets_and_keeps_private_traffic_direct(tmp_path, procs, target):
+    client_port = free_port()
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(
+        tmp_path,
+        [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
+    )
+    profile = json.loads((out / "singbox.json").read_text(encoding="utf-8"))
+    profile["log"] = {"level": "info"}
+    profile["inbounds"] = [
+        {"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": client_port}
+    ]
+    spawn(procs, [SING_BOX, "run", "-c", write_json(tmp_path / "sb_full.json", profile)], tmp_path)
+    wait_port(client_port, timeout=60)
+    assert fetch_through(client_port, target) == BODY
+    deadline = time.time() + 30
+    log_path = tmp_path / "proc-0.log"
+    text = ""
+    while time.time() < deadline:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+        if "geosite-ir" in text and "geoip-ir" in text:
+            break
+        time.sleep(1)
+    assert "FATAL" not in text
+    assert (tmp_path / "cache.db").exists()
+
+
+@need_xray
+@need_geo
+def test_full_xray_config_loads_with_geo_assets_and_keeps_private_traffic_direct(tmp_path, procs, target):
+    http_port, socks_port = free_port(), free_port()
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(
+        tmp_path,
+        [ss_outbound(8388), reality_outbound(443, "A" * 43), hysteria2x_outbound(8443, cert.read_text())],
+    )
+    config = json.loads((out / "xray.json").read_text(encoding="utf-8"))
+    config["inbounds"][0]["port"] = socks_port
+    config["inbounds"][1]["port"] = http_port
+    path = write_json(tmp_path / "xray_full.json", config)
+    env = dict(os.environ, XRAY_LOCATION_ASSET=GEO_ASSETS)
+    check = subprocess.run([XRAY, "run", "-test", "-c", path], capture_output=True, text=True, env=env)
+    assert check.returncode == 0, check.stdout + check.stderr
+    spawn(procs, [XRAY, "run", "-c", path], tmp_path, env=env)
+    wait_port(http_port)
+    assert fetch_through(http_port, target) == BODY
