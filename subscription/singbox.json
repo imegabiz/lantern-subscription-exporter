@@ -3,12 +3,27 @@
     "level": "warn",
     "timestamp": true
   },
+  "dns": {
+    "servers": [
+      {
+        "type": "https",
+        "tag": "dns-remote",
+        "server": "1.1.1.1",
+        "detour": "Lantern"
+      }
+    ],
+    "final": "dns-remote",
+    "strategy": "ipv4_only"
+  },
   "inbounds": [
     {
-      "type": "mixed",
-      "tag": "mixed-in",
-      "listen": "127.0.0.1",
-      "listen_port": 2080
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "auto_route": true,
+      "stack": "mixed"
     }
   ],
   "outbounds": [
@@ -18,7 +33,6 @@
       "outbounds": [
         "Lantern Auto",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇩🇪 Germany · Frankfurt · SS #2",
         "🇳🇱 Netherlands · Amsterdam · HY2"
       ],
       "default": "Lantern Auto"
@@ -28,7 +42,6 @@
       "tag": "Lantern Auto",
       "outbounds": [
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇩🇪 Germany · Frankfurt · SS #2",
         "🇳🇱 Netherlands · Amsterdam · HY2"
       ],
       "url": "https://www.gstatic.com/generate_204",
@@ -42,14 +55,6 @@
       "server_port": 443,
       "method": "2022-blake3-chacha20-poly1305",
       "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS #2",
-      "server": "18.170.225.48",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
     },
     {
       "type": "hysteria2",
@@ -82,6 +87,20 @@
     }
   ],
   "route": {
-    "final": "Lantern"
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      }
+    ],
+    "final": "Lantern",
+    "auto_detect_interface": true
   }
 }
