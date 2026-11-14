@@ -1,9 +1,11 @@
 import base64
+import hashlib
+import ssl
 from urllib.parse import quote, urlsplit, parse_qs, unquote
 
 from .errors import ValidationError
 
-PROTOCOL_LABELS = {"shadowsocks": "SS", "vless": "VLESS"}
+PROTOCOL_LABELS = {"shadowsocks": "SS", "vless": "VLESS", "hysteria2": "HY2"}
 
 
 def flag(country_code):
@@ -77,11 +79,33 @@ def _vless_link(outbound, name):
     )
 
 
+def certificate_pin(pem):
+    return hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
+
+
+def _hysteria2_link(outbound, name):
+    tls = outbound["tls"]
+    params = [
+        ("sni", tls["server_name"]),
+        ("insecure", "1"),
+        ("pinSHA256", certificate_pin(tls["certificate"])),
+    ]
+    query = "&".join("%s=%s" % (key, quote(value, safe="")) for key, value in params)
+    return "hysteria2://%s@%s?%s#%s" % (
+        quote(outbound["password"], safe=""),
+        _authority(outbound["server"], outbound["server_port"]),
+        query,
+        quote(name, safe=""),
+    )
+
+
 def build_link(proxy, name):
     if proxy.kind == "shadowsocks":
         link = _shadowsocks_link(proxy.outbound, name)
     elif proxy.kind == "vless":
         link = _vless_link(proxy.outbound, name)
+    elif proxy.kind == "hysteria2":
+        link = _hysteria2_link(proxy.outbound, name)
     else:
         raise ValidationError("cannot build a link for type %s" % proxy.kind)
     check_link(link, proxy)
@@ -111,6 +135,15 @@ def check_link(link, proxy):
         method, _, password = _decode_userinfo(parts.username or "").partition(":")
         if method != outbound["method"] or password != outbound["password"]:
             raise ValidationError("shadowsocks credentials do not round-trip")
+        return
+    if proxy.kind == "hysteria2":
+        if parts.scheme != "hysteria2" or unquote(parts.username or "") != outbound["password"]:
+            raise ValidationError("wrong hysteria2 identity")
+        flat = {key: values[0] for key, values in parse_qs(parts.query, keep_blank_values=True).items()}
+        if flat.get("sni") != outbound["tls"]["server_name"] or flat.get("insecure") != "1":
+            raise ValidationError("hysteria2 tls parameters are wrong")
+        if flat.get("pinSHA256") != certificate_pin(outbound["tls"]["certificate"]):
+            raise ValidationError("hysteria2 certificate pin does not match")
         return
     if parts.scheme != "vless" or parts.username != outbound["uuid"]:
         raise ValidationError("wrong vless identity")
