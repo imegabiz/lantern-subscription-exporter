@@ -1,4 +1,5 @@
 {
+  "remarks": "👽 Anonymous Lantern 🚀",
   "log": {
     "loglevel": "warning"
   },
@@ -37,6 +38,36 @@
   ],
   "outbounds": [
     {
+      "protocol": "vless",
+      "settings": {
+        "address": "34.245.28.249",
+        "port": 443,
+        "id": "fad6c240-14d0-47ce-9264-21c5f18689c1",
+        "encryption": "none",
+        "flow": "xtls-rprx-vision"
+      },
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.amazon.com",
+          "fingerprint": "chrome",
+          "password": "ZODw0ijKEfbSpHjvQqTyYzsbLpnlnA3j9Io5PfmZ-Ts"
+        }
+      },
+      "tag": "lantern-01-vless"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "3.71.19.239",
+        "port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
+      },
+      "tag": "lantern-02-ss"
+    },
+    {
       "protocol": "hysteria",
       "settings": {
         "version": 2,
@@ -74,37 +105,7 @@
           ]
         }
       },
-      "tag": "lantern-01-hy2"
-    },
-    {
-      "protocol": "vless",
-      "settings": {
-        "address": "34.245.28.249",
-        "port": 443,
-        "id": "fad6c240-14d0-47ce-9264-21c5f18689c1",
-        "encryption": "none",
-        "flow": "xtls-rprx-vision"
-      },
-      "streamSettings": {
-        "network": "raw",
-        "security": "reality",
-        "realitySettings": {
-          "serverName": "www.amazon.com",
-          "fingerprint": "chrome",
-          "password": "ZODw0ijKEfbSpHjvQqTyYzsbLpnlnA3j9Io5PfmZ-Ts"
-        }
-      },
-      "tag": "lantern-02-vless"
-    },
-    {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "47.245.132.133",
-        "port": 443,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
-      },
-      "tag": "lantern-03-ss"
+      "tag": "lantern-03-hy2"
     },
     {
       "tag": "direct",
@@ -123,7 +124,7 @@
         "selector": [
           "lantern-"
         ],
-        "fallbackTag": "lantern-01-hy2",
+        "fallbackTag": "lantern-01-vless",
         "strategy": {
           "type": "leastPing"
         }
@@ -143,6 +144,21 @@
           "::1/128",
           "fc00::/7",
           "fe80::/10"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:ir",
+          "geosite:category-ir"
+        ],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "ip": [
+          "geoip:ir"
         ],
         "outboundTag": "direct"
       },
