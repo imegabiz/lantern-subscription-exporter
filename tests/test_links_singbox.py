@@ -6,7 +6,7 @@ import pytest
 
 from lantern_exporter.errors import ValidationError
 from lantern_exporter.extract import extract
-from lantern_exporter.links import build_link, check_link, display_name, flag, unique_names
+from lantern_exporter.links import build_link, certificate_pin, check_link, display_name, flag, unique_names
 from lantern_exporter.singbox import build_profile, render_profile, validate_profile
 
 
@@ -95,4 +95,44 @@ def test_validate_profile_catches_dangling_references(proxies):
     profile = build_profile(proxies, names)
     profile["route"]["final"] = "missing"
     with pytest.raises(ValidationError):
-        validate_profile(profile, 2)
+        validate_profile(profile, 3)
+
+
+def test_hysteria2_link_has_sni_insecure_and_pin(proxies):
+    hy2 = proxies[2]
+    link = build_link(hy2, "name")
+    parts = urlsplit(link)
+    query = {k: v[0] for k, v in parse_qs(parts.query, keep_blank_values=True).items()}
+    assert parts.scheme == "hysteria2" and parts.username == hy2.outbound["password"]
+    assert query["sni"] == "api.push.apple.com" and query["insecure"] == "1"
+    assert query["pinSHA256"] == certificate_pin(hy2.outbound["tls"]["certificate"])
+    assert len(query["pinSHA256"]) == 64
+
+
+def test_hysteria2_password_is_percent_encoded(proxies):
+    from lantern_exporter.extract import Proxy
+
+    hy2 = proxies[2]
+    outbound = dict(hy2.outbound, password="p@ss:w/rd#1")
+    odd = Proxy(hy2.kind, outbound, hy2.country_code, hy2.country, hy2.city)
+    link = build_link(odd, "n")
+    assert "p%40ss%3Aw%2Frd%231@" in link
+
+
+def test_hysteria2_link_tampering_is_detected(proxies):
+    link = build_link(proxies[2], "n")
+    with pytest.raises(ValidationError):
+        check_link(link.replace("insecure=1", "insecure=0"), proxies[2])
+    with pytest.raises(ValidationError):
+        check_link(link.replace("pinSHA256=", "pinSHA256=00"), proxies[2])
+
+
+def test_profile_embeds_hysteria2_certificate_as_lines(proxies):
+    names = unique_names(proxies, reserved=("Lantern", "Lantern Auto", "direct"))
+    profile = build_profile(proxies, names)
+    hy2 = next(o for o in profile["outbounds"] if o["type"] == "hysteria2")
+    lines = hy2["tls"]["certificate"]
+    assert lines[0] == "-----BEGIN CERTIFICATE-----" and lines[-1] == "-----END CERTIFICATE-----"
+    assert hy2["tls"]["server_name"] == "api.push.apple.com"
+    assert "insecure" not in hy2["tls"]
+    assert proxies[2].outbound["tls"]["certificate"].startswith("-----BEGIN")
