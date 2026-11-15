@@ -56,6 +56,8 @@ def _vless_link(outbound, name):
     params = [("encryption", "none")]
     if outbound.get("flow"):
         params.append(("flow", outbound["flow"]))
+    if outbound.get("packet_encoding"):
+        params.append(("packetEncoding", outbound["packet_encoding"]))
     tls = outbound.get("tls")
     if not tls:
         params.append(("security", "none"))
@@ -158,3 +160,5 @@ def check_link(link, proxy):
             raise ValidationError("vless reality parameters are incomplete")
     if outbound.get("flow") and flat.get("flow") != outbound["flow"]:
         raise ValidationError("vless flow parameter is wrong")
+    if outbound.get("packet_encoding") and flat.get("packetEncoding") != outbound["packet_encoding"]:
+        raise ValidationError("vless packet encoding parameter is wrong")
