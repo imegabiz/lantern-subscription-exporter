@@ -14,6 +14,7 @@ import requests
 
 from lantern_exporter.client import LanternClient
 from lantern_exporter.pipeline import run
+from lantern_exporter.state import generate_key_text, parse_key
 
 from conftest import FakeResponse, FakeSession
 
@@ -119,12 +120,19 @@ def generate(tmp_path, outbounds, locations=None):
     }
     session = FakeSession(
         {
-            "/user-create": lambda n: FakeResponse(200, {"userId": 1, "token": "t"}),
+            "/user-create": lambda n: FakeResponse(200, {"userId": 1, "token": "core-test-token-long-value"}),
             "/config-new": lambda n: FakeResponse(200, response),
         }
     )
     out = tmp_path / "sub"
-    run(LanternClient(session=session), tmp_path / "state.json", out)
+    run(
+        LanternClient(session=session),
+        tmp_path / "state" / "state.enc",
+        out,
+        parse_key(generate_key_text()),
+        bootstrap="create",
+        hysteria2_links="include",
+    )
     return out
 
 
@@ -460,7 +468,7 @@ def test_xray_client_from_generated_link_connects_ss2022(tmp_path, procs, target
 
 @pytest.mark.xfail(
     strict=False,
-    reason="observed: sing-box 1.14.4 client is rejected by an Xray 26.11.9 Reality server; the same outbound works with a sing-box server and through an Xray client",
+    reason="observed with Xray 26.11.9 only: the sing-box 1.14.4 client is rejected by its Reality server; the same outbound works with Xray 26.3.23, with a sing-box server and through an Xray client",
 )
 @need_xray
 @need_singbox
@@ -778,3 +786,54 @@ def test_full_xray_config_loads_with_geo_assets_and_keeps_private_traffic_direct
     spawn(procs, [XRAY, "run", "-c", path], tmp_path, env=env)
     wait_port(http_port)
     assert fetch_through(http_port, target) == BODY
+
+
+@need_hiddify
+def test_hiddify_ignores_the_certificate_pin_which_is_why_hysteria2_links_are_opt_in(tmp_path):
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    out = generate(tmp_path, [hysteria2x_outbound(8443, cert.read_text())])
+    link = (out / "sub.txt").read_text(encoding="utf-8")
+    assert "pinSHA256=" in link and "insecure=1" in link
+    parsed = tmp_path / "hiddify_parsed.json"
+    subprocess.run(
+        [HIDDIFY, "parse", str(out / "sub.txt"), "-o", str(parsed)],
+        check=True,
+        capture_output=True,
+        env=hiddify_env(),
+        cwd=str(tmp_path),
+        timeout=60,
+    )
+    outbound = json.loads(parsed.read_text(encoding="utf-8"))["outbounds"][0]
+    assert outbound["tls"]["insecure"] is True
+    assert "certificate" not in outbound["tls"]
+    assert not any("pin" in key.lower() or "sha256" in key.lower() for key in outbound["tls"])
+
+
+@need_xray
+@need_singbox
+def test_generated_xray_hysteria2_without_the_junk_flag_sends_no_noise_datagram(tmp_path, procs, target):
+    listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    listener.bind(("127.0.0.1", 0))
+    listener.settimeout(0.5)
+    server_port = listener.getsockname()[1]
+    client_port = free_port()
+    cert, _ = make_cert(tmp_path, "api.push.apple.com")
+    outbound = hysteria2x_outbound(server_port, cert.read_text())
+    outbound["pre_initial_junk"] = False
+    out = generate(tmp_path, [outbound])
+    config = json.loads((out / "xray.json").read_text(encoding="utf-8"))
+    assert "finalmask" not in config["outbounds"][0]["streamSettings"]
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    trigger = threading.Thread(target=lambda: _quiet_fetch(client_port, target), daemon=True)
+    trigger.start()
+    sizes = []
+    deadline = time.time() + 5
+    while time.time() < deadline and len(sizes) < 2:
+        try:
+            data, _ = listener.recvfrom(65535)
+        except socket.timeout:
+            continue
+        sizes.append(len(data))
+    listener.close()
+    assert sizes and sizes[0] >= 1200
