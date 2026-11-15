@@ -1,6 +1,8 @@
 import copy
+import datetime
 
 import pytest
+from certs import make_pem
 
 from lantern_exporter.errors import ExtractionError
 from lantern_exporter.extract import extract
@@ -15,7 +17,7 @@ def test_real_shape_keeps_standard_and_skips_custom(config_response):
     assert hy2.outbound["type"] == "hysteria2"
     assert hy2.outbound["tls"]["server_name"] == "api.push.apple.com"
     assert hy2.outbound["tls"]["certificate"].startswith("-----BEGIN CERTIFICATE-----")
-    assert "pre_initial_junk" not in hy2.outbound
+    assert hy2.outbound["pre_initial_junk"] is True
     assert ss.outbound["method"] == "2022-blake3-chacha20-poly1305"
     assert vless.outbound["flow"] == "xtls-rprx-vision"
     assert vless.outbound["tls"]["reality"]["public_key"]
@@ -153,7 +155,91 @@ def test_hysteria2x_certificate_given_as_lines_is_accepted(config_response):
     assert hy2.outbound["tls"]["certificate"].endswith("-----END CERTIFICATE-----\n")
 
 
-def test_hysteria2x_junk_flag_is_dropped_not_required(config_response):
-    outbound = _hysteria2x(config_response)
-    outbound["pre_initial_junk"] = False
-    assert [p.kind for p in extract(config_response).proxies][-1] == "hysteria2"
+@pytest.mark.parametrize("value,expected", [(True, True), (False, False), (None, False)])
+def test_hysteria2x_junk_flag_is_kept_with_the_documented_default(config_response, value, expected):
+    _hysteria2x(config_response)["pre_initial_junk"] = value
+    assert extract(config_response).proxies[2].outbound["pre_initial_junk"] is expected
+
+
+def test_hysteria2x_missing_junk_flag_defaults_to_false(config_response):
+    del _hysteria2x(config_response)["pre_initial_junk"]
+    assert extract(config_response).proxies[2].outbound["pre_initial_junk"] is False
+
+
+@pytest.mark.parametrize("bad", [1, 0, "true", [], {}])
+def test_hysteria2x_non_boolean_junk_flag_is_rejected(config_response, bad):
+    _hysteria2x(config_response)["pre_initial_junk"] = bad
+    result = extract(config_response)
+    assert result.skipped["invalid_junk_flag:hysteria2x"] == 1
+    assert len(result.proxies) == 2
+
+
+def test_counters_add_up_exactly(config_response):
+    outbounds = config_response["options"]["outbounds"]
+    outbounds.append({"type": "selector", "tag": "s", "outbounds": []})
+    outbounds.append(dict(outbounds[0], tag="copy"))
+    outbounds.append(dict(outbounds[0], tag="bad", password=""))
+    outbounds.append("junk")
+    outbounds.append({"type": "tuic", "tag": "t"})
+    counts = extract(config_response).counts
+    assert counts == {"total": 10, "usable": 3, "utility": 1, "unsupported": 3, "invalid": 2, "duplicate": 1}
+    assert counts["total"] == sum(v for k, v in counts.items() if k != "total")
+
+
+def test_no_truncation_even_with_many_configs(config_response):
+    outbounds = config_response["options"]["outbounds"]
+    base = outbounds[0]
+    for index in range(250):
+        outbounds.append(dict(base, tag="x%d" % index, server_port=2000 + index))
+    result = extract(config_response)
+    assert result.counts["usable"] == 253 and len(result.proxies) == 253
+    assert [p.outbound.get("server_port") for p in result.proxies[3:6]] == [2000, 2001, 2002]
+
+
+def test_processing_order_follows_the_response_order(config_response):
+    outbounds = config_response["options"]["outbounds"]
+    outbounds.reverse()
+    assert [p.kind for p in extract(config_response).proxies] == ["hysteria2", "vless", "shadowsocks"]
+
+
+
+def test_certificate_with_a_private_key_is_rejected(config_response):
+    _hysteria2x(config_response)["tls"]["certificate"] = make_pem(include_private_key=True)
+    result = extract(config_response)
+    assert result.skipped["certificate_contains_private_key:hysteria2x"] == 1
+    assert [p.kind for p in result.proxies] == ["shadowsocks", "vless"]
+
+
+def test_certificate_chain_is_rejected_explicitly(config_response):
+    _hysteria2x(config_response)["tls"]["certificate"] = make_pem() + make_pem()
+    assert extract(config_response).skipped["unsupported_certificate_chain:hysteria2x"] == 1
+
+
+def test_expired_and_not_yet_valid_certificates_are_rejected(config_response):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    expired = make_pem(now - datetime.timedelta(days=30), now - datetime.timedelta(days=1))
+    future = make_pem(now + datetime.timedelta(days=1), now + datetime.timedelta(days=30))
+    _hysteria2x(config_response)["tls"]["certificate"] = expired
+    assert extract(config_response).skipped["certificate_expired:hysteria2x"] == 1
+    _hysteria2x(config_response)["tls"]["certificate"] = future
+    assert extract(config_response).skipped["certificate_not_yet_valid:hysteria2x"] == 1
+
+
+def test_valid_base64_that_is_not_a_certificate_is_rejected(config_response):
+    body = "\n".join(["-----BEGIN CERTIFICATE-----", "QUJDREVGR0hJSktMTU5PUA==", "-----END CERTIFICATE-----"])
+    _hysteria2x(config_response)["tls"]["certificate"] = body
+    assert extract(config_response).skipped["invalid_certificate:hysteria2x"] == 1
+
+
+def test_certificate_is_canonicalised(config_response):
+    pem = make_pem()
+    messy = pem.replace("\n", "\r\n") + "\n\n"
+    _hysteria2x(config_response)["tls"]["certificate"] = messy
+    stored = extract(config_response).proxies[2].outbound["tls"]["certificate"]
+    assert stored == pem
+    assert "\r" not in stored
+
+
+def test_fixture_certificate_is_a_real_parsed_certificate(config_response):
+    hy2 = extract(config_response).proxies[2]
+    assert hy2.outbound["tls"]["certificate"].count("BEGIN CERTIFICATE") == 1
