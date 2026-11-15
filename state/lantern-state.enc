@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "algorithm": "AES-256-GCM",
+  "nonce": "AnZn8TOubzMBNyxk",
+  "ciphertext": "WGD9ING5fC6eo5ZCVlTeUPeNJDOaoWWcOmCkv6MF7JQUKxt/rGGjxOX4PqmogmmZ89h5x4ve+U+2Ka+Oa7iWW9QVKNVOSrqQG4veD8Wh/QpsxubRYkSw4lQfFkZ36bGoj4BEFzmjEk08W0f/Glt4Zx5e+brllTAVZo4K8aXeP+Xw9KzifusU/scUtIASbf8sGOmeBQB60ldj"
+}

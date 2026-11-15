@@ -60,62 +60,32 @@
     {
       "protocol": "shadowsocks",
       "settings": {
-        "address": "63.189.228.89",
+        "address": "52.56.125.185",
         "port": 443,
         "method": "2022-blake3-chacha20-poly1305",
-        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
+        "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
       },
       "tag": "lantern-02-ss"
     },
     {
       "protocol": "shadowsocks",
       "settings": {
-        "address": "52.56.125.185",
+        "address": "63.189.228.89",
         "port": 443,
         "method": "2022-blake3-chacha20-poly1305",
-        "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
+        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
       },
       "tag": "lantern-03-ss"
     },
     {
-      "protocol": "hysteria",
+      "protocol": "shadowsocks",
       "settings": {
-        "version": 2,
-        "address": "172.239.224.58",
-        "port": 8443
+        "address": "89.39.70.49",
+        "port": 61312,
+        "method": "chacha20-ietf-poly1305",
+        "password": "MGU4ZjVkMGNhY2Y3YzM0NmIxMDgyNDQ5OGVjZjY2Y2Y="
       },
-      "streamSettings": {
-        "network": "hysteria",
-        "security": "tls",
-        "tlsSettings": {
-          "serverName": "api.push.apple.com",
-          "alpn": [
-            "h3"
-          ],
-          "pinnedPeerCertSha256": "88d100de52f9fc51897a6db00266186646fc1212b51870e5c8dc605465135a82"
-        },
-        "hysteriaSettings": {
-          "version": 2,
-          "auth": "3076acd4c2f743cad66d8dbb32eeff0530cf185d0b7ab3e4c1781b2e33c14ead"
-        },
-        "finalmask": {
-          "udp": [
-            {
-              "type": "noise",
-              "settings": {
-                "reset": "30-60",
-                "noise": [
-                  {
-                    "rand": "8-64",
-                    "delay": "10-20"
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      },
-      "tag": "lantern-04-hy2"
+      "tag": "lantern-04-ss"
     },
     {
       "tag": "direct",
