@@ -68,8 +68,34 @@ def _vless(outbound):
     return {"protocol": "vless", "settings": settings, "streamSettings": stream}
 
 
+def _junk_mask():
+    return {
+        "udp": [
+            {
+                "type": "noise",
+                "settings": {
+                    "reset": "30-60",
+                    "noise": [{"rand": "8-64", "delay": "10-20"}],
+                },
+            }
+        ]
+    }
+
+
 def _hysteria2(outbound):
     tls = outbound["tls"]
+    stream = {
+        "network": "hysteria",
+        "security": "tls",
+        "tlsSettings": {
+            "serverName": tls["server_name"],
+            "alpn": ["h3"],
+            "pinnedPeerCertSha256": certificate_pin(tls["certificate"]),
+        },
+        "hysteriaSettings": {"version": 2, "auth": outbound["password"]},
+    }
+    if outbound.get("pre_initial_junk") is True:
+        stream["finalmask"] = _junk_mask()
     return {
         "protocol": "hysteria",
         "settings": {
@@ -77,27 +103,7 @@ def _hysteria2(outbound):
             "address": outbound["server"],
             "port": outbound["server_port"],
         },
-        "streamSettings": {
-            "network": "hysteria",
-            "security": "tls",
-            "tlsSettings": {
-                "serverName": tls["server_name"],
-                "alpn": ["h3"],
-                "pinnedPeerCertSha256": certificate_pin(tls["certificate"]),
-            },
-            "hysteriaSettings": {"version": 2, "auth": outbound["password"]},
-            "finalmask": {
-                "udp": [
-                    {
-                        "type": "noise",
-                        "settings": {
-                            "reset": "30-60",
-                            "noise": [{"rand": "8-64", "delay": "10-20"}],
-                        },
-                    }
-                ]
-            },
-        },
+        "streamSettings": stream,
     }
 
 
