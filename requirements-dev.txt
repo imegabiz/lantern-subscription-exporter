@@ -1,2 +1,2 @@
--r requirements.txt
-pytest>=8.0.0
+requests==2.34.2
+cryptography==50.0.2
