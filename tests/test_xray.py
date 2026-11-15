@@ -135,3 +135,61 @@ def test_missing_remarks_is_rejected(config):
     broken["remarks"] = " "
     with pytest.raises(ValidationError):
         validate_config(broken, 3)
+
+
+import hashlib
+import ssl
+
+from certs import make_pem
+from lantern_exporter.extract import Proxy
+
+
+def _hy2_proxy(proxies, **changes):
+    source = proxies[2]
+    outbound = json.loads(json.dumps(source.outbound))
+    for key, value in changes.items():
+        outbound[key] = value
+    return Proxy(source.kind, outbound, source.country_code, source.country, source.city)
+
+
+@pytest.mark.parametrize("junk,expected", [(True, True), (False, False)])
+def test_final_mask_follows_the_real_pre_initial_junk_value(proxies, junk, expected):
+    built = build_config([proxies[0], _hy2_proxy(proxies, pre_initial_junk=junk)])
+    stream = outbound(built, "-hy2")["streamSettings"]
+    assert ("finalmask" in stream) is expected
+
+
+def test_final_mask_is_absent_when_the_flag_is_missing(proxies):
+    hy2 = _hy2_proxy(proxies)
+    del hy2.outbound["pre_initial_junk"]
+    assert "finalmask" not in outbound(build_config([hy2]), "-hy2")["streamSettings"]
+
+
+def test_final_mask_matches_the_documented_noise_behaviour(proxies):
+    mask = outbound(build_config([_hy2_proxy(proxies, pre_initial_junk=True)]), "-hy2")["streamSettings"]["finalmask"]
+    assert mask == {
+        "udp": [{"type": "noise", "settings": {"reset": "30-60", "noise": [{"rand": "8-64", "delay": "10-20"}]}}]
+    }
+
+
+def test_pin_is_the_sha256_of_the_der_certificate_in_lowercase_hex(proxies):
+    pem = proxies[2].outbound["tls"]["certificate"]
+    expected = hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
+    pin = outbound(build_config(proxies), "-hy2")["streamSettings"]["tlsSettings"]["pinnedPeerCertSha256"]
+    assert pin == expected
+    assert len(pin) == 64 and pin == pin.lower() and ":" not in pin
+
+
+def test_a_replaced_server_certificate_changes_the_pin(proxies):
+    other = make_pem()
+    changed = _hy2_proxy(proxies)
+    changed.outbound["tls"]["certificate"] = other
+    first = outbound(build_config(proxies), "-hy2")["streamSettings"]["tlsSettings"]["pinnedPeerCertSha256"]
+    second = outbound(build_config([changed]), "-hy2")["streamSettings"]["tlsSettings"]["pinnedPeerCertSha256"]
+    assert first != second
+    assert second == hashlib.sha256(ssl.PEM_cert_to_DER_cert(other)).hexdigest()
+
+
+def test_no_private_key_or_pem_reaches_the_xray_config(proxies):
+    text = render_config(build_config(proxies)).decode("utf-8")
+    assert "PRIVATE KEY" not in text and "BEGIN CERTIFICATE" not in text
