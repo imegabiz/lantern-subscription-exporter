@@ -35,6 +35,7 @@ def build_profile(proxies, names):
         outbound = {"type": proxy.outbound["type"], "tag": name}
         outbound.update(copy.deepcopy({k: v for k, v in proxy.outbound.items() if k != "type"}))
         if proxy.kind == "hysteria2":
+            outbound.pop("pre_initial_junk", None)
             outbound["tls"]["certificate"] = outbound["tls"]["certificate"].strip().split("\n")
         proxy_outbounds.append(outbound)
     profile = {
