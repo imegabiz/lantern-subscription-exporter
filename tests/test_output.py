@@ -49,3 +49,41 @@ def test_failure_while_staging_leaves_everything_untouched(tmp_path, monkeypatch
     assert (tmp_path / "a.txt").read_bytes() == b"old-a\n"
     assert (tmp_path / "b.txt").read_bytes() == b"old-b\n"
     assert sorted(p.name for p in tmp_path.iterdir()) == ["a.txt", "b.txt"]
+
+
+def test_a_failure_while_replacing_restores_every_earlier_file(tmp_path, monkeypatch):
+    write_files(tmp_path, {"a.txt": b"old-a\n", "b.txt": b"old-b\n", "c.txt": b"old-c\n"})
+    real_replace = os.replace
+    state = {"count": 0}
+
+    def flaky(src, dst):
+        state["count"] += 1
+        if state["count"] == 3:
+            raise OSError("rename failed")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(output.os, "replace", flaky)
+    with pytest.raises(OutputError):
+        write_files(tmp_path, {"a.txt": b"new-a\n", "b.txt": b"new-b\n", "c.txt": b"new-c\n"})
+    monkeypatch.setattr(output.os, "replace", real_replace)
+    assert (tmp_path / "a.txt").read_bytes() == b"old-a\n"
+    assert (tmp_path / "b.txt").read_bytes() == b"old-b\n"
+    assert (tmp_path / "c.txt").read_bytes() == b"old-c\n"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["a.txt", "b.txt", "c.txt"]
+
+
+def test_a_failed_first_publication_leaves_no_partial_files(tmp_path, monkeypatch):
+    real_replace = os.replace
+    state = {"count": 0}
+
+    def flaky(src, dst):
+        state["count"] += 1
+        if state["count"] == 2:
+            raise OSError("rename failed")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(output.os, "replace", flaky)
+    with pytest.raises(OutputError):
+        write_files(tmp_path, {"a.txt": b"a\n", "b.txt": b"b\n"})
+    monkeypatch.setattr(output.os, "replace", real_replace)
+    assert list(tmp_path.iterdir()) == []
