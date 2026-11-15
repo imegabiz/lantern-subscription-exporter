@@ -1,28 +1,43 @@
+import email.utils
 import json
+import logging
 import random
 import string
+import time
 
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from . import constants as C
 from .errors import ApiError
 
+log = logging.getLogger("lantern_exporter")
+
 
 def build_session():
     session = requests.Session()
-    retry = Retry(
-        total=C.RETRY_TOTAL,
-        backoff_factor=C.RETRY_BACKOFF,
-        status_forcelist=C.RETRY_STATUSES,
-        allowed_methods=frozenset(["POST"]),
-        raise_on_status=False,
-    )
-    adapter = HTTPAdapter(max_retries=retry)
+    adapter = HTTPAdapter(max_retries=0)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     return session
+
+
+def parse_retry_after(value, now=None):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.isdigit():
+        return float(int(text))
+    try:
+        moment = email.utils.parsedate_to_datetime(text)
+    except (TypeError, ValueError):
+        return None
+    if moment is None:
+        return None
+    current = time.time() if now is None else now
+    return max(0.0, moment.timestamp() - current)
 
 
 class LanternClient:
@@ -38,6 +53,8 @@ class LanternClient:
         pro_server_url=C.PRO_SERVER_URL,
         config_base_url=C.CONFIG_BASE_URL,
         rng=None,
+        sleep=time.sleep,
+        clock=time.time,
     ):
         self.session = session if session is not None else build_session()
         self.country = country
@@ -49,12 +66,14 @@ class LanternClient:
         self.pro_server_url = pro_server_url.rstrip("/")
         self.config_base_url = config_base_url.rstrip("/")
         self.rng = rng if rng is not None else random.SystemRandom()
+        self.sleep = sleep
+        self.clock = clock
 
     def _noise(self):
         size = self.rng.randrange(0, 300)
         return "".join(self.rng.choice(string.ascii_lowercase) for _ in range(size))
 
-    def _headers(self, state, include_token):
+    def _headers(self, device_id, user_id=0):
         headers = {
             "User-Agent": self.user_agent,
             "Accept": "application/json",
@@ -62,35 +81,77 @@ class LanternClient:
             C.HEADER_VERSION: self.app_version,
             C.HEADER_PLATFORM: self.platform,
             C.HEADER_APP_NAME: C.APP_NAME,
-            C.HEADER_DEVICE_ID: state.device_id,
+            C.HEADER_DEVICE_ID: device_id,
             C.HEADER_NOISE: self._noise(),
         }
-        if state.user_id > 0:
-            headers[C.HEADER_USER_ID] = str(state.user_id)
-        if include_token and state.token:
-            headers[C.HEADER_PRO_TOKEN] = state.token
+        if user_id > 0:
+            headers[C.HEADER_USER_ID] = str(user_id)
         if self.country:
             headers[C.HEADER_CLIENT_COUNTRY] = self.country
         return headers
 
-    def _post(self, url, headers, body):
-        try:
-            response = self.session.post(
-                url,
-                headers=headers,
-                data=body,
-                timeout=(C.CONNECT_TIMEOUT, C.READ_TIMEOUT),
-            )
-        except requests.RequestException as exc:
-            raise ApiError("request to %s failed: %s" % (url, type(exc).__name__)) from exc
-        return response
+    def _backoff(self, attempt):
+        delay = C.RETRY_BASE_DELAY * (2 ** (attempt - 1)) + self.rng.uniform(0, C.RETRY_JITTER)
+        return min(C.RETRY_MAX_DELAY, delay)
 
-    def create_user(self, state):
+    def _delay_after_status(self, response, attempt):
+        header = None
+        headers = getattr(response, "headers", None)
+        if headers:
+            header = headers.get("Retry-After")
+        waited = parse_retry_after(header, now=self.clock())
+        if waited is None:
+            return self._backoff(attempt)
+        if waited > C.RETRY_AFTER_CAP:
+            return None
+        return waited + self.rng.uniform(0, 1)
+
+    def _post(self, url, headers, body, label, idempotent):
+        attempts = C.CONFIG_ATTEMPTS if idempotent else 1
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                response = self.session.post(
+                    url,
+                    headers=headers,
+                    data=body,
+                    timeout=(C.CONNECT_TIMEOUT, C.READ_TIMEOUT),
+                )
+            except requests.RequestException as exc:
+                if attempt >= attempts:
+                    raise ApiError("%s failed after %d attempt(s): %s" % (label, attempt, type(exc).__name__)) from exc
+                delay = self._backoff(attempt)
+                log.warning("%s failed (%s), retrying in %.0fs", label, type(exc).__name__, delay)
+                self.sleep(delay)
+                continue
+            if response.status_code in C.RETRY_STATUSES and attempt < attempts:
+                delay = self._delay_after_status(response, attempt)
+                if delay is None:
+                    raise ApiError(
+                        "%s returned HTTP %d with a Retry-After above %.0fs, not waiting"
+                        % (label, response.status_code, C.RETRY_AFTER_CAP),
+                        response.status_code,
+                    )
+                log.warning("%s returned HTTP %d, retrying in %.0fs", label, response.status_code, delay)
+                self.sleep(delay)
+                continue
+            return response
+
+    @staticmethod
+    def _status_error(label, response):
+        message = "%s returned HTTP %d" % (label, response.status_code)
+        headers = getattr(response, "headers", None)
+        retry_after = headers.get("Retry-After") if headers else None
+        if response.status_code == 429 and retry_after:
+            message += " (Retry-After: %s)" % str(retry_after)[:40]
+        return ApiError(message, response.status_code)
+
+    def create_user(self, device_id):
         url = self.pro_server_url + "/user-create"
-        headers = self._headers(state.without_user(), include_token=False)
-        response = self._post(url, headers, None)
+        response = self._post(url, self._headers(device_id), None, "user-create", idempotent=False)
         if response.status_code != 200:
-            raise ApiError("user-create returned HTTP %d" % response.status_code, response.status_code)
+            raise self._status_error("user-create", response)
         try:
             data = response.json()
         except ValueError as exc:
@@ -105,7 +166,7 @@ class LanternClient:
             raise ApiError("user-create response has no valid userId")
         if not isinstance(token, str) or not token:
             raise ApiError("user-create response has no token")
-        return state.with_user(user_id, token)
+        return user_id, token
 
     def _config_body(self, state):
         body = {
@@ -125,12 +186,12 @@ class LanternClient:
         if not state.has_user:
             raise ApiError("cannot fetch config without a user")
         url = self.config_base_url + "/config-new"
-        headers = self._headers(state, include_token=False)
+        headers = self._headers(state.device_id, state.user_id)
         headers["Content-Type"] = "application/json"
         headers["Cache-Control"] = "no-cache"
-        response = self._post(url, headers, self._config_body(state))
+        response = self._post(url, headers, self._config_body(state), "config-new", idempotent=True)
         if response.status_code != 200:
-            raise ApiError("config-new returned HTTP %d" % response.status_code, response.status_code)
+            raise self._status_error("config-new", response)
         try:
             data = response.json()
         except ValueError as exc:
