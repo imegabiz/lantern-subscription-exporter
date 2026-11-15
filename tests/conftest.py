@@ -1,18 +1,22 @@
 import copy
 import json
+import random
 from pathlib import Path
 
 import pytest
 import requests
 
+from lantern_exporter.state import generate_key_text, parse_key
+
 FIXTURE = Path(__file__).parent / "fixtures" / "config_response.json"
 
 
 class FakeResponse:
-    def __init__(self, status=200, payload=None, raw=None):
+    def __init__(self, status=200, payload=None, raw=None, headers=None):
         self.status_code = status
         self._payload = payload
         self._raw = raw
+        self.headers = headers or {}
 
     def json(self):
         if self._raw is not None:
@@ -35,6 +39,9 @@ class FakeSession:
                 return result
         raise AssertionError("unexpected url " + url)
 
+    def count(self, suffix):
+        return len([c for c in self.calls if c["url"].endswith(suffix)])
+
 
 @pytest.fixture
 def config_response():
@@ -44,6 +51,21 @@ def config_response():
 @pytest.fixture
 def user_payload():
     return {"userId": 424242, "token": "secret-token-value", "userLevel": "free"}
+
+
+@pytest.fixture
+def key_text():
+    return generate_key_text()
+
+
+@pytest.fixture
+def key(key_text):
+    return parse_key(key_text)
+
+
+@pytest.fixture
+def sleeps():
+    return []
 
 
 @pytest.fixture
@@ -59,10 +81,13 @@ def make_session(config_response, user_payload):
 
 
 @pytest.fixture
-def make_client():
+def make_client(sleeps):
     from lantern_exporter.client import LanternClient
 
     def factory(session, **kwargs):
+        kwargs.setdefault("sleep", sleeps.append)
+        kwargs.setdefault("rng", random.Random(7))
+        kwargs.setdefault("clock", lambda: 1000.0)
         return LanternClient(session=session, **kwargs)
 
     return factory
