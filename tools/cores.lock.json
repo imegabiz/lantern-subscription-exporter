@@ -1,0 +1,48 @@
+{
+  "xray": {
+    "v26.3.23": {
+      "url": "https://github.com/XTLS/Xray-core/releases/download/v26.3.23/Xray-linux-64.zip",
+      "sha256": "8985f9dac52714194cd86368e6361f234b9e26017603b24d58d83041197c5db5",
+      "format": "zip",
+      "binary": "xray"
+    },
+    "v26.11.9": {
+      "url": "https://github.com/XTLS/Xray-core/releases/download/v26.11.9/Xray-linux-64.zip",
+      "sha256": "b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82",
+      "format": "zip",
+      "binary": "xray"
+    }
+  },
+  "sing-box": {
+    "v1.14.4": {
+      "url": "https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-linux-amd64.tar.gz",
+      "sha256": "699a1b510aa4396b2176d32d1181920399ebf1e267835da6f3b598d0f7c24968",
+      "format": "tar.gz",
+      "binary": "sing-box-1.14.4-linux-amd64/sing-box"
+    }
+  },
+  "hiddify-core": {
+    "v5.9.1": {
+      "url": "https://github.com/hiddify/hiddify-core/releases/download/v5.9.1/hiddify-core-linux-amd64.tar.gz",
+      "sha256": "3999b9fa120981d4e1adf97213b479e9d11d8e088ed0a3fb46363f70f4b2404a",
+      "format": "tar.gz",
+      "binary": "hiddify-core-linux-amd64/hiddify-core"
+    }
+  },
+  "geoip": {
+    "202611080027": {
+      "url": "https://github.com/v2fly/geoip/releases/download/202611080027/geoip.dat",
+      "sha256": "eedb24b3b9fcba27e06b92c0428dab90d9496083091ae4cf39e11387fd99d0e2",
+      "format": "file",
+      "binary": "geoip.dat"
+    }
+  },
+  "geosite": {
+    "20261115005626": {
+      "url": "https://github.com/v2fly/domain-list-community/releases/download/20261115005626/dlc.dat",
+      "sha256": "26e5f04c498ea651f62fa864f8e83ac5198ca311724e634d79f0ac02cdfe74fc",
+      "format": "file",
+      "binary": "geosite.dat"
+    }
+  }
+}
