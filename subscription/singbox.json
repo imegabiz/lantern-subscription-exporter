@@ -45,9 +45,9 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
-        "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇳🇱 Netherlands · Amsterdam · SS",
+        "🇳🇱 Netherlands · Amsterdam · HY2",
         "🇩🇪 Germany · Frankfurt · SS",
+        "🇩🇪 Germany · Frankfurt · VLESS",
         "🇩🇪 Germany · Frankfurt · SS #2"
       ],
       "default": "👽 Anonymous Lantern 🌐"
@@ -56,14 +56,46 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
-        "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇳🇱 Netherlands · Amsterdam · SS",
+        "🇳🇱 Netherlands · Amsterdam · HY2",
         "🇩🇪 Germany · Frankfurt · SS",
+        "🇩🇪 Germany · Frankfurt · VLESS",
         "🇩🇪 Germany · Frankfurt · SS #2"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
       "tolerance": 50
+    },
+    {
+      "type": "hysteria2",
+      "tag": "🇳🇱 Netherlands · Amsterdam · HY2",
+      "server": "172.239.236.15",
+      "server_port": 8443,
+      "password": "4e43a3d3d9a6b72d39ef0d80c18b2428e48a4bc4d00bcbf341624f088965e960",
+      "tls": {
+        "enabled": true,
+        "server_name": "api.push.apple.com",
+        "certificate": [
+          "-----BEGIN CERTIFICATE-----",
+          "MIIBgTCCASegAwIBAgIRAL1IZDE1Xsxz5vj5gmnlWngwCgYIKoZIzj0EAwIwFDES",
+          "MBAGA1UEAxMJbWF0dXJhYmxlMB4XDTI2MDYxMDA0MDYyOFoXDTM3MDYwNzA0MDYy",
+          "OFowFDESMBAGA1UEAxMJbWF0dXJhYmxlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcD",
+          "QgAENaL4eMYZKc+MLmbVcuh4txJeWNhS3QVg7XLTpwRmi6zWZAyVuN4iLSAeCEye",
+          "1wjYBEUzI3AhBpF15nf6W4M9UKNaMFgwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQM",
+          "MAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwIwYDVR0RBBwwGoISYXBpLnB1c2gu",
+          "YXBwbGUuY29thwSs7+wPMAoGCCqGSM49BAMCA0gAMEUCIGLX0bCVdWOpo5/PuKXX",
+          "QxTB/1rljDOoBTWcUjjEnATzAiEAvhSXlH3y6ARLk6h50cUPds0gAFEJcOOn0vDo",
+          "BkIC3Uk=",
+          "-----END CERTIFICATE-----"
+        ]
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
+      "server": "52.56.125.185",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
     },
     {
       "type": "vless",
@@ -87,24 +119,8 @@
     },
     {
       "type": "shadowsocks",
-      "tag": "🇳🇱 Netherlands · Amsterdam · SS",
-      "server": "89.39.70.49",
-      "server_port": 61312,
-      "method": "chacha20-ietf-poly1305",
-      "password": "MGU4ZjVkMGNhY2Y3YzM0NmIxMDgyNDQ5OGVjZjY2Y2Y="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS",
-      "server": "52.56.125.185",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
-    },
-    {
-      "type": "shadowsocks",
       "tag": "🇩🇪 Germany · Frankfurt · SS #2",
-      "server": "63.189.228.89",
+      "server": "63.185.24.101",
       "server_port": 443,
       "method": "2022-blake3-chacha20-poly1305",
       "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="

@@ -38,6 +38,56 @@
   ],
   "outbounds": [
     {
+      "protocol": "hysteria",
+      "settings": {
+        "version": 2,
+        "address": "172.239.236.15",
+        "port": 8443
+      },
+      "streamSettings": {
+        "network": "hysteria",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "api.push.apple.com",
+          "alpn": [
+            "h3"
+          ],
+          "pinnedPeerCertSha256": "fd8361b5a846d5024b8564bee77a46b201c7bd235ebe4e7a1b5e25eff3de0e27"
+        },
+        "hysteriaSettings": {
+          "version": 2,
+          "auth": "4e43a3d3d9a6b72d39ef0d80c18b2428e48a4bc4d00bcbf341624f088965e960"
+        },
+        "finalmask": {
+          "udp": [
+            {
+              "type": "noise",
+              "settings": {
+                "reset": "30-60",
+                "noise": [
+                  {
+                    "rand": "8-64",
+                    "delay": "10-20"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "tag": "lantern-01-hy2"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "52.56.125.185",
+        "port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
+      },
+      "tag": "lantern-02-ss"
+    },
+    {
       "protocol": "vless",
       "settings": {
         "address": "54.247.210.25",
@@ -55,32 +105,12 @@
           "password": "ZODw0ijKEfbSpHjvQqTyYzsbLpnlnA3j9Io5PfmZ-Ts"
         }
       },
-      "tag": "lantern-01-vless"
+      "tag": "lantern-03-vless"
     },
     {
       "protocol": "shadowsocks",
       "settings": {
-        "address": "89.39.70.49",
-        "port": 61312,
-        "method": "chacha20-ietf-poly1305",
-        "password": "MGU4ZjVkMGNhY2Y3YzM0NmIxMDgyNDQ5OGVjZjY2Y2Y="
-      },
-      "tag": "lantern-02-ss"
-    },
-    {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "52.56.125.185",
-        "port": 443,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
-      },
-      "tag": "lantern-03-ss"
-    },
-    {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "63.189.228.89",
+        "address": "63.185.24.101",
         "port": 443,
         "method": "2022-blake3-chacha20-poly1305",
         "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
@@ -104,7 +134,7 @@
         "selector": [
           "lantern-"
         ],
-        "fallbackTag": "lantern-01-vless",
+        "fallbackTag": "lantern-01-hy2",
         "strategy": {
           "type": "leastPing"
         }
