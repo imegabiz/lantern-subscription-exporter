@@ -1,7 +1,14 @@
+import copy
+import hashlib
+import ipaddress
+import json
 import re
 import ssl
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+
+from cryptography import x509
 
 from . import constants as C
 from .errors import ExtractionError
@@ -18,9 +25,11 @@ REALITY_KEYS = frozenset({"enabled", "public_key", "short_id"})
 REALITY_PUBLIC_KEY = re.compile(r"^[A-Za-z0-9_-]{43}$")
 SHORT_ID = re.compile(r"^(?:[0-9a-fA-F]{2}){0,8}$")
 HOST = re.compile(r"^[A-Za-z0-9.:_\-]+$")
+PEM_BLOCK = re.compile(r"-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----", re.S)
 FINGERPRINTS = frozenset(
     {"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}
 )
+PACKET_ENCODINGS = ("", "xudp")
 
 
 @dataclass(frozen=True)
@@ -36,6 +45,7 @@ class Proxy:
 class Extraction:
     proxies: list
     skipped: dict = field(default_factory=dict)
+    counts: dict = field(default_factory=dict)
     country: str = ""
 
 
@@ -68,7 +78,7 @@ def _text(value, reason):
     return value
 
 
-def _normalize_shadowsocks(raw):
+def _normalize_shadowsocks(raw, now):
     _check_keys(raw, SHADOWSOCKS_KEYS)
     method = _text(raw.get("method"), "invalid_method")
     if method not in C.SHADOWSOCKS_METHODS:
@@ -125,10 +135,15 @@ def _normalize_tls(raw):
     return tls
 
 
-def _normalize_vless(raw):
+def _normalize_vless(raw, now):
     _check_keys(raw, VLESS_KEYS)
     if raw.get("network") not in (None, "tcp"):
         raise _Reject("unsupported_transport")
+    packet_encoding = raw.get("packet_encoding")
+    if packet_encoding is None:
+        packet_encoding = ""
+    if packet_encoding not in PACKET_ENCODINGS:
+        raise _Reject("unsupported_packet_encoding")
     flow = raw.get("flow", "")
     if flow not in ("", "xtls-rprx-vision"):
         raise _Reject("unsupported_flow")
@@ -144,6 +159,10 @@ def _normalize_vless(raw):
     }
     if flow:
         outbound["flow"] = flow
+    if raw.get("network") == "tcp":
+        outbound["network"] = "tcp"
+    if packet_encoding:
+        outbound["packet_encoding"] = packet_encoding
     if "tls" in raw:
         outbound["tls"] = _normalize_tls(raw["tls"])
     elif flow:
@@ -151,22 +170,34 @@ def _normalize_vless(raw):
     return outbound
 
 
-def _normalize_certificate(value):
+def _normalize_certificate(value, now):
     if isinstance(value, list) and value and all(isinstance(line, str) for line in value):
         value = "\n".join(value)
     if not isinstance(value, str) or not value.strip() or len(value) > MAX_CERTIFICATE_CHARS:
         raise _Reject("invalid_certificate")
-    pem = value.strip() + "\n"
-    try:
-        ssl.PEM_cert_to_DER_cert(pem)
-    except ValueError:
+    if "PRIVATE KEY" in value.upper():
+        raise _Reject("certificate_contains_private_key")
+    blocks = PEM_BLOCK.findall(value)
+    if len(blocks) > 1:
+        raise _Reject("unsupported_certificate_chain")
+    if len(blocks) != 1:
         raise _Reject("invalid_certificate")
-    return pem
+    try:
+        der = ssl.PEM_cert_to_DER_cert("-----BEGIN CERTIFICATE-----" + blocks[0] + "-----END CERTIFICATE-----")
+        parsed = x509.load_der_x509_certificate(der)
+    except Exception:
+        raise _Reject("invalid_certificate")
+    if parsed.not_valid_after_utc < now:
+        raise _Reject("certificate_expired")
+    if parsed.not_valid_before_utc > now:
+        raise _Reject("certificate_not_yet_valid")
+    return ssl.DER_cert_to_PEM_cert(der)
 
 
-def _normalize_hysteria2x(raw):
+def _normalize_hysteria2x(raw, now):
     _check_keys(raw, HYSTERIA2X_KEYS)
-    if raw.get("pre_initial_junk") not in (None, True, False):
+    junk = raw.get("pre_initial_junk")
+    if junk not in (None, True, False) or (junk is not None and not isinstance(junk, bool)):
         raise _Reject("invalid_junk_flag")
     tls = raw.get("tls")
     if not isinstance(tls, dict):
@@ -184,8 +215,9 @@ def _normalize_hysteria2x(raw):
         "tls": {
             "enabled": True,
             "server_name": _host(tls.get("server_name")),
-            "certificate": _normalize_certificate(tls["certificate"]),
+            "certificate": _normalize_certificate(tls["certificate"], now),
         },
+        "pre_initial_junk": bool(junk),
     }
 
 
@@ -196,16 +228,36 @@ NORMALIZERS = {
 }
 
 
-def _identity(outbound):
-    credential = outbound.get("password") or outbound.get("uuid")
-    reality = outbound.get("tls", {}).get("reality", {})
-    return (
-        outbound["type"],
-        outbound["server"],
-        outbound["server_port"],
-        credential,
-        reality.get("public_key", ""),
-    )
+def _canonical_host(value):
+    text = value.strip().lower().rstrip(".")
+    try:
+        return ipaddress.ip_address(text).compressed
+    except ValueError:
+        return text
+
+
+def canonical_identity(outbound):
+    data = copy.deepcopy(outbound)
+    data.pop("tag", None)
+    data["server"] = _canonical_host(data["server"])
+    kind = data["type"]
+    tls = data.get("tls")
+    if isinstance(tls, dict) and "server_name" in tls:
+        tls["server_name"] = tls["server_name"].lower()
+    if kind == "vless":
+        data["uuid"] = data["uuid"].lower()
+        data.setdefault("flow", "")
+        data.setdefault("network", "tcp")
+        data.setdefault("packet_encoding", "")
+        if isinstance(tls, dict):
+            reality = tls.get("reality")
+            if isinstance(reality, dict):
+                reality["short_id"] = reality.get("short_id", "").lower()
+    if kind == "hysteria2":
+        der = ssl.PEM_cert_to_DER_cert(tls["certificate"])
+        tls["certificate"] = hashlib.sha256(der).hexdigest()
+        data["pre_initial_junk"] = bool(data.get("pre_initial_junk"))
+    return json.dumps(data, sort_keys=True, separators=(",", ":"))
 
 
 def _location(locations, tag):
@@ -223,7 +275,7 @@ def _location(locations, tag):
     )
 
 
-def extract(response):
+def extract(response, now=None):
     if not isinstance(response, dict):
         raise ExtractionError("config response is not an object")
     options = response.get("options")
@@ -232,47 +284,52 @@ def extract(response):
     outbounds = options.get("outbounds")
     if not isinstance(outbounds, list):
         raise ExtractionError("config response has no outbounds list")
+    moment = now if now is not None else datetime.now(timezone.utc)
     locations = response.get("outbound_locations")
     skipped = {}
+    counts = {"total": len(outbounds), "usable": 0, "utility": 0, "unsupported": 0, "invalid": 0, "duplicate": 0}
     proxies = []
     seen = set()
 
-    def skip(reason):
+    def skip(reason, bucket):
         skipped[reason] = skipped.get(reason, 0) + 1
+        counts[bucket] += 1
 
     for raw in outbounds:
         if not isinstance(raw, dict):
-            skip("not_an_object")
+            skip("not_an_object", "invalid")
             continue
         kind = raw.get("type")
         tag = raw.get("tag")
         if not isinstance(kind, str) or not kind:
-            skip("missing_type")
+            skip("missing_type", "invalid")
             continue
         if kind in UTILITY_TYPES:
+            counts["utility"] += 1
             continue
         normalizer = NORMALIZERS.get(kind)
         if normalizer is None:
-            skip("unsupported_type:%s" % kind)
+            skip("unsupported_type:%s" % kind, "unsupported")
             continue
         try:
-            outbound = normalizer(raw)
+            outbound = normalizer(raw, moment)
         except _Reject as exc:
             detail = "(%s)" % exc.args[1] if len(exc.args) > 1 else ""
-            skip("%s:%s%s" % (exc.args[0], kind, detail))
+            bucket = "unsupported" if exc.args[0].startswith("unsupported") else "invalid"
+            skip("%s:%s%s" % (exc.args[0], kind, detail), bucket)
             continue
-        identity = _identity(outbound)
+        identity = canonical_identity(outbound)
         if identity in seen:
-            skip("duplicate:%s" % kind)
+            skip("duplicate:%s" % kind, "duplicate")
             continue
         seen.add(identity)
         code, country, city = _location(locations, tag)
         proxies.append(Proxy(kind=outbound["type"], outbound=outbound, country_code=code, country=country, city=city))
-        if len(proxies) >= C.MAX_CONFIGS:
-            break
+        counts["usable"] += 1
     country = response.get("country")
     return Extraction(
         proxies=proxies,
         skipped=skipped,
+        counts=counts,
         country=country if isinstance(country, str) else "",
     )
