@@ -222,3 +222,64 @@ def test_unknown_rule_set_or_dns_server_is_rejected(proxies):
     next(o for o in broken["outbounds"] if o["tag"] == "direct")["domain_resolver"] = "nope"
     with pytest.raises(ValidationError):
         validate_profile(broken, 3)
+
+
+import hashlib
+import ssl
+
+from certs import make_pem
+from lantern_exporter.extract import Proxy
+
+
+def _modified_hy2(proxies, **changes):
+    source = proxies[2]
+    outbound = json.loads(json.dumps(source.outbound))
+    outbound.update(changes)
+    return Proxy(source.kind, outbound, source.country_code, source.country, source.city)
+
+
+def test_singbox_hysteria2_never_carries_the_junk_flag(proxies):
+    names = unique_names(proxies, reserved=RESERVED_TAGS)
+    for junk in (True, False):
+        swapped = [proxies[0], proxies[1], _modified_hy2(proxies, pre_initial_junk=junk)]
+        profile = build_profile(swapped, names)
+        hy2 = next(o for o in profile["outbounds"] if o["type"] == "hysteria2")
+        assert "pre_initial_junk" not in hy2
+
+
+def test_the_link_cannot_carry_the_junk_flag(proxies):
+    link = build_link(_modified_hy2(proxies, pre_initial_junk=True), "n")
+    assert "junk" not in link.lower()
+
+
+def test_pin_in_the_link_is_the_official_hysteria_format(proxies):
+    pem = proxies[2].outbound["tls"]["certificate"]
+    expected = hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
+    assert certificate_pin(pem) == expected
+    query = parse_qs(urlsplit(build_link(proxies[2], "n")).query)
+    assert query["pinSHA256"] == [expected] and len(expected) == 64 and expected == expected.lower()
+
+
+def test_a_replaced_certificate_changes_the_link_pin(proxies):
+    other = _modified_hy2(proxies)
+    other.outbound["tls"]["certificate"] = make_pem()
+    first = parse_qs(urlsplit(build_link(proxies[2], "n")).query)["pinSHA256"]
+    second = parse_qs(urlsplit(build_link(other, "n")).query)["pinSHA256"]
+    assert first != second
+
+
+def test_vless_packet_encoding_reaches_the_link_and_the_profile(proxies):
+    source = proxies[1]
+    outbound = json.loads(json.dumps(source.outbound))
+    outbound["packet_encoding"] = "xudp"
+    proxy = Proxy(source.kind, outbound, source.country_code, source.country, source.city)
+    assert parse_qs(urlsplit(build_link(proxy, "n")).query)["packetEncoding"] == ["xudp"]
+    names = unique_names([proxies[0], proxy, proxies[2]], reserved=RESERVED_TAGS)
+    profile = build_profile([proxies[0], proxy, proxies[2]], names)
+    vless_out = next(o for o in profile["outbounds"] if o["type"] == "vless")
+    assert vless_out["packet_encoding"] == "xudp"
+
+
+def test_no_private_key_or_unused_pem_reaches_the_link_list(proxies):
+    links = "\n".join(build_link(p, "n") for p in proxies)
+    assert "PRIVATE KEY" not in links and "BEGIN CERTIFICATE" not in links
