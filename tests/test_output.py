@@ -87,3 +87,49 @@ def test_a_failed_first_publication_leaves_no_partial_files(tmp_path, monkeypatc
         write_files(tmp_path, {"a.txt": b"a\n", "b.txt": b"b\n"})
     monkeypatch.setattr(output.os, "replace", real_replace)
     assert list(tmp_path.iterdir()) == []
+
+
+def test_an_empty_file_is_allowed_only_for_the_named_file_and_replaces_old_content(tmp_path):
+    write_files(tmp_path, {"sub.txt": b"old-link\n", "x.json": b"{}\n"})
+    changed = write_files(tmp_path, {"sub.txt": b"", "x.json": b"{}\n"}, allow_empty=("sub.txt",))
+    assert changed == ["sub.txt"]
+    assert (tmp_path / "sub.txt").exists() and (tmp_path / "sub.txt").read_bytes() == b""
+
+
+def test_an_empty_json_file_is_still_refused_even_when_sub_may_be_empty(tmp_path):
+    write_files(tmp_path, {"sub.txt": b"old-link\n", "x.json": b"{}\n"})
+    with pytest.raises(OutputError):
+        write_files(tmp_path, {"sub.txt": b"", "x.json": b""}, allow_empty=("sub.txt",))
+    assert (tmp_path / "sub.txt").read_bytes() == b"old-link\n"
+    assert (tmp_path / "x.json").read_bytes() == b"{}\n"
+
+
+def test_empty_content_is_refused_by_default_for_every_file(tmp_path):
+    with pytest.raises(OutputError):
+        write_files(tmp_path, {"sub.txt": b""})
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_non_bytes_value_is_refused_even_for_the_allowed_file(tmp_path):
+    with pytest.raises(OutputError):
+        write_files(tmp_path, {"sub.txt": ""}, allow_empty=("sub.txt",))
+
+
+def test_emptying_sub_is_rolled_back_when_a_later_replacement_fails(tmp_path, monkeypatch):
+    write_files(tmp_path, {"a.txt": b"old-a\n", "sub.txt": b"old-link\n"})
+    real_replace = os.replace
+    state = {"count": 0}
+
+    def flaky(src, dst):
+        state["count"] += 1
+        if state["count"] == 2:
+            raise OSError("rename failed")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(output.os, "replace", flaky)
+    with pytest.raises(OutputError):
+        write_files(tmp_path, {"sub.txt": b"", "a.txt": b"new-a\n"}, allow_empty=("sub.txt",))
+    monkeypatch.setattr(output.os, "replace", real_replace)
+    assert (tmp_path / "sub.txt").read_bytes() == b"old-link\n"
+    assert (tmp_path / "a.txt").read_bytes() == b"old-a\n"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["a.txt", "sub.txt"]
