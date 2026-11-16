@@ -837,3 +837,209 @@ def test_generated_xray_hysteria2_without_the_junk_flag_sends_no_noise_datagram(
         sizes.append(len(data))
     listener.close()
     assert sizes and sizes[0] >= 1200
+
+
+VLESS_UUID = "11111111-2222-4333-8444-555555555555"
+
+
+def plain_vless(port, **changes):
+    base = {"type": "vless", "tag": "plain", "server": "127.0.0.1", "server_port": port, "uuid": VLESS_UUID}
+    base.update(changes)
+    return base
+
+
+def xray_version(binary_path):
+    text = subprocess.run([binary_path, "version"], capture_output=True, text=True, check=True).stdout
+    return re.search(r"Xray (\d+\.\d+\.\d+)", text).group(1)
+
+
+def xray_server_plain_vless(tmp_path, port):
+    config = {
+        "log": {"loglevel": "warning"},
+        "inbounds": [
+            {
+                "listen": "127.0.0.1",
+                "port": port,
+                "protocol": "vless",
+                "settings": {"clients": [{"id": VLESS_UUID}], "decryption": "none"},
+            }
+        ],
+        "outbounds": [XRAY_FREEDOM],
+    }
+    return write_json(tmp_path / "xray_server_plain_vless.json", config)
+
+
+SHAPES_WITH_SNI = {"tls-sni", "tls-sni-fp-xudp", "reality-sni", "reality-sni-xudp"}
+
+VLESS_SHAPES = {
+    "no-tls": plain_vless(8443),
+    "no-tls-xudp": plain_vless(8443, packet_encoding="xudp"),
+    "tls-sni": plain_vless(8443, tls={"enabled": True, "server_name": "a.example.com"}),
+    "tls-no-sni": plain_vless(8443, tls={"enabled": True}),
+    "tls-fp-no-sni": plain_vless(8443, tls={"enabled": True, "utls": {"enabled": True, "fingerprint": "chrome"}}),
+    "tls-sni-fp-xudp": plain_vless(
+        8443,
+        packet_encoding="xudp",
+        tls={"enabled": True, "server_name": "a.example.com", "utls": {"enabled": True, "fingerprint": "chrome"}},
+    ),
+    "reality-sni": plain_vless(
+        8443,
+        flow="xtls-rprx-vision",
+        tls={
+            "enabled": True,
+            "server_name": "a.example.com",
+            "utls": {"enabled": True, "fingerprint": "chrome"},
+            "reality": {"enabled": True, "public_key": "A" * 43, "short_id": "0011"},
+        },
+    ),
+    "reality-sni-xudp": plain_vless(
+        8443,
+        flow="xtls-rprx-vision",
+        packet_encoding="xudp",
+        tls={
+            "enabled": True,
+            "server_name": "a.example.com",
+            "utls": {"enabled": True, "fingerprint": "chrome"},
+            "reality": {"enabled": True, "public_key": "A" * 43},
+        },
+    ),
+}
+
+
+@need_xray
+@need_geo
+@pytest.mark.parametrize("shape", sorted(VLESS_SHAPES))
+def test_real_xray_loads_every_vless_shape_from_the_generated_config(tmp_path, shape):
+    out = generate(tmp_path, [VLESS_SHAPES[shape]])
+    env = dict(os.environ, XRAY_LOCATION_ASSET=GEO_ASSETS)
+    result = subprocess.run(
+        [XRAY, "run", "-test", "-c", str(out / "xray.json")], capture_output=True, text=True, env=env
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Configuration OK" in result.stdout
+
+
+@need_singbox
+@pytest.mark.parametrize("shape", sorted(VLESS_SHAPES))
+def test_real_singbox_checks_every_vless_shape_from_the_generated_profile(tmp_path, shape):
+    out = generate(tmp_path, [VLESS_SHAPES[shape]])
+    result = subprocess.run([SING_BOX, "check", "-c", str(out / "singbox.json")], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    profile = json.loads((out / "singbox.json").read_text(encoding="utf-8"))
+    vless_out = next(o for o in profile["outbounds"] if o["type"] == "vless")
+    assert ("packet_encoding" in vless_out) is ("xudp" in shape)
+    assert ("server_name" in vless_out.get("tls", {})) is (shape in SHAPES_WITH_SNI)
+
+
+@need_xray
+def test_real_xray_silently_accepts_an_invented_vless_field_so_none_is_ever_added(tmp_path):
+    config = {
+        "log": {"loglevel": "warning"},
+        "inbounds": [{"listen": "127.0.0.1", "port": free_port(), "protocol": "http"}],
+        "outbounds": [
+            {
+                "tag": "p",
+                "protocol": "vless",
+                "settings": {
+                    "address": "127.0.0.1",
+                    "port": 8443,
+                    "id": VLESS_UUID,
+                    "encryption": "none",
+                    "packetEncoding": "xudp",
+                    "definitelyNotAField": True,
+                },
+                "streamSettings": {"network": "raw"},
+            }
+        ],
+    }
+    result = subprocess.run([XRAY, "run", "-test", "-c", write_json(tmp_path / "bogus.json", config)], capture_output=True, text=True)
+    assert result.returncode == 0 and "Configuration OK" in result.stdout
+
+
+@need_xray
+def test_real_xray_plaintext_vless_rule_matches_what_the_extractor_enforces(tmp_path):
+    version = xray_version(XRAY)
+
+    def loads(address):
+        config = {
+            "log": {"loglevel": "warning"},
+            "inbounds": [{"listen": "127.0.0.1", "port": free_port(), "protocol": "http"}],
+            "outbounds": [
+                {
+                    "tag": "p",
+                    "protocol": "vless",
+                    "settings": {"address": address, "port": 443, "id": VLESS_UUID, "encryption": "none"},
+                    "streamSettings": {"network": "raw"},
+                }
+            ],
+        }
+        result = subprocess.run(
+            [XRAY, "run", "-test", "-c", write_json(tmp_path / ("p-%s.json" % address), config)],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
+
+    assert loads("10.0.0.2") and loads("127.0.0.1")
+    public_loads = loads("8.8.8.8")
+    expected = {"26.3.23": True, "26.11.9": False}
+    assert public_loads == expected.get(version, public_loads)
+
+
+@need_xray
+def test_generated_xray_config_connects_plain_vless_to_a_real_xray_server(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    out = generate(tmp_path, [plain_vless(server_port)])
+    spawn(procs, [XRAY, "run", "-c", xray_server_plain_vless(tmp_path, server_port)], tmp_path)
+    wait_port(server_port)
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_xray
+def test_generated_xray_config_connects_plain_vless_with_xudp_in_the_source_just_the_same(tmp_path, procs, target):
+    server_port, client_port = free_port(), free_port()
+    out = generate(tmp_path, [plain_vless(server_port, packet_encoding="xudp")])
+    assert "xudp" not in (out / "xray.json").read_text(encoding="utf-8").lower()
+    spawn(procs, [XRAY, "run", "-c", xray_server_plain_vless(tmp_path, server_port)], tmp_path)
+    wait_port(server_port)
+    spawn(procs, [XRAY, "run", "-c", xray_client_from_generated(out, tmp_path, client_port)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_xray
+@need_singbox
+@pytest.mark.parametrize("encoding", [None, "xudp"])
+def test_generated_singbox_profile_connects_plain_vless_with_and_without_packet_encoding(tmp_path, procs, target, encoding):
+    server_port, client_port = free_port(), free_port()
+    changes = {"packet_encoding": encoding} if encoding else {}
+    out = generate(tmp_path, [plain_vless(server_port, **changes)])
+    profile = pin_route(json.loads((out / "singbox.json").read_text(encoding="utf-8")), "", client_port)
+    assert ("packet_encoding" in next(o for o in profile["outbounds"] if o["type"] == "vless")) is bool(encoding)
+    spawn(procs, [XRAY, "run", "-c", xray_server_plain_vless(tmp_path, server_port)], tmp_path)
+    wait_port(server_port)
+    spawn(procs, [SING_BOX, "run", "-c", write_json(tmp_path / "sb_client.json", profile)], tmp_path)
+    wait_port(client_port)
+    assert fetch_through(client_port, target) == BODY
+
+
+@need_hiddify
+@pytest.mark.parametrize("encoding", [None, "xudp"])
+def test_hiddify_applies_xudp_to_a_vless_link_with_or_without_the_parameter(tmp_path, encoding):
+    changes = {"packet_encoding": encoding} if encoding else {}
+    out = generate(tmp_path, [plain_vless(8443, **changes)])
+    link = (out / "sub.txt").read_text(encoding="utf-8")
+    assert ("packetEncoding=xudp" in link) is bool(encoding)
+    parsed = tmp_path / "hiddify_pe.json"
+    subprocess.run(
+        [HIDDIFY, "parse", str(out / "sub.txt"), "-o", str(parsed)],
+        check=True,
+        capture_output=True,
+        env=hiddify_env(),
+        cwd=str(tmp_path),
+        timeout=60,
+    )
+    outbound = json.loads(parsed.read_text(encoding="utf-8"))["outbounds"][0]
+    assert outbound.get("packet_encoding") == "xudp"
