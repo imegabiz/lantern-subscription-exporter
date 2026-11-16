@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import ssl
-from urllib.parse import quote, urlsplit, parse_qs, unquote
+from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlsplit
 
 from .errors import ValidationError
 
@@ -122,10 +122,62 @@ def _decode_userinfo(value):
         raise ValidationError("shadowsocks userinfo is not valid base64") from exc
 
 
+def _expected_vless_query(outbound):
+    tls = outbound.get("tls")
+    expected = {"encryption": "none", "type": "tcp"}
+    if outbound.get("flow"):
+        expected["flow"] = outbound["flow"]
+    if outbound.get("packet_encoding"):
+        expected["packetEncoding"] = outbound["packet_encoding"]
+    if not tls:
+        expected["security"] = "none"
+        return expected
+    reality = tls.get("reality")
+    expected["security"] = "reality" if reality else "tls"
+    if tls.get("server_name"):
+        expected["sni"] = tls["server_name"]
+    if tls.get("utls"):
+        expected["fp"] = tls["utls"]["fingerprint"]
+    if reality:
+        expected["pbk"] = reality["public_key"]
+        expected["sid"] = reality.get("short_id", "")
+    return expected
+
+
+def _check_vless(parts, outbound):
+    if parts.scheme != "vless":
+        raise ValidationError("wrong scheme for vless")
+    if parts.password is not None or unquote(parts.username or "") != outbound["uuid"]:
+        raise ValidationError("wrong vless identity")
+    if parts.path not in ("", "/"):
+        raise ValidationError("vless link has an unexpected path")
+    tokens = parts.query.split("&") if parts.query else []
+    if any("=" not in token for token in tokens):
+        raise ValidationError("vless link has a malformed query parameter")
+    pairs = parse_qsl(parts.query, keep_blank_values=True)
+    keys = [key for key, _ in pairs]
+    if len(keys) != len(set(keys)):
+        raise ValidationError("vless link repeats a query parameter")
+    found = dict(pairs)
+    expected = _expected_vless_query(outbound)
+    missing = sorted(set(expected) - set(found))
+    unexpected = sorted(set(found) - set(expected))
+    changed = sorted(key for key in expected if key in found and found[key] != expected[key])
+    if missing or unexpected or changed:
+        raise ValidationError(
+            "vless link parameters do not match the source: missing=%s unexpected=%s changed=%s"
+            % (",".join(missing) or "-", ",".join(unexpected) or "-", ",".join(changed) or "-")
+        )
+
+
 def check_link(link, proxy):
-    parts = urlsplit(link)
+    try:
+        parts = urlsplit(link)
+        port = parts.port
+    except ValueError as exc:
+        raise ValidationError("link cannot be parsed") from exc
     outbound = proxy.outbound
-    if parts.hostname is None or parts.port != outbound["server_port"]:
+    if parts.hostname is None or port != outbound["server_port"]:
         raise ValidationError("link has a wrong host or port")
     if parts.hostname.lower() != outbound["server"].lower():
         raise ValidationError("link host does not match the outbound")
@@ -147,18 +199,4 @@ def check_link(link, proxy):
         if flat.get("pinSHA256") != certificate_pin(outbound["tls"]["certificate"]):
             raise ValidationError("hysteria2 certificate pin does not match")
         return
-    if parts.scheme != "vless" or parts.username != outbound["uuid"]:
-        raise ValidationError("wrong vless identity")
-    query = parse_qs(parts.query, keep_blank_values=True)
-    flat = {key: values[0] for key, values in query.items()}
-    tls = outbound.get("tls")
-    expected_security = "none" if not tls else ("reality" if tls.get("reality") else "tls")
-    if flat.get("security") != expected_security:
-        raise ValidationError("vless security parameter is wrong")
-    if expected_security == "reality":
-        if flat.get("pbk") != tls["reality"]["public_key"] or not flat.get("sni") or not flat.get("fp"):
-            raise ValidationError("vless reality parameters are incomplete")
-    if outbound.get("flow") and flat.get("flow") != outbound["flow"]:
-        raise ValidationError("vless flow parameter is wrong")
-    if outbound.get("packet_encoding") and flat.get("packetEncoding") != outbound["packet_encoding"]:
-        raise ValidationError("vless packet encoding parameter is wrong")
+    _check_vless(parts, outbound)
