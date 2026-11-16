@@ -293,19 +293,105 @@ def only_hysteria2(config_response):
     return config_response
 
 
-def test_only_hysteria2_available_fails_cleanly_when_links_are_omitted(make_session, make_client, tmp_path, key, config_response):
+def keep_types(config_response, *types):
+    config_response["options"]["outbounds"] = [
+        o for o in config_response["options"]["outbounds"] if o["type"] in types
+    ]
+    return config_response
+
+
+def sub_lines(tmp_path):
+    return (layout(tmp_path)[1] / "sub.txt").read_text(encoding="utf-8").splitlines()
+
+
+def json_protocols(tmp_path):
+    out = layout(tmp_path)[1]
+    profile = json.loads((out / "singbox.json").read_text(encoding="utf-8"))
+    xray = json.loads((out / "xray.json").read_text(encoding="utf-8"))
+    singbox_types = [o["type"] for o in profile["outbounds"] if o["type"] in ("shadowsocks", "vless", "hysteria2")]
+    xray_types = [o["protocol"] for o in xray["outbounds"] if o["tag"].startswith("lantern-")]
+    return singbox_types, xray_types
+
+
+def test_only_hysteria2_with_links_omitted_still_publishes_both_json_files_and_an_empty_sub(make_session, make_client, tmp_path, key, config_response):
     session = make_session(config=only_hysteria2(config_response))
-    with pytest.raises(ValidationError) as info:
-        go(make_client, session, tmp_path, key, bootstrap="create")
-    assert "Hysteria2" in str(info.value)
-    assert snapshot(layout(tmp_path)[1]) == {}
+    result = go(make_client, session, tmp_path, key, bootstrap="create")
+    out = layout(tmp_path)[1]
+    assert (out / "sub.txt").exists() and (out / "sub.txt").read_bytes() == b""
+    assert json_protocols(tmp_path) == (["hysteria2"], ["hysteria"])
+    assert result.count == 1 and result.link_count == 0 and result.links_omitted == 1
+    assert sorted(result.changed) == ["singbox.json", "sub.txt", "xray.json"]
 
 
-def test_only_hysteria2_available_is_published_when_links_are_included(make_session, make_client, tmp_path, key, config_response):
+def test_only_hysteria2_with_links_included_publishes_the_link(make_session, make_client, tmp_path, key, config_response):
     session = make_session(config=only_hysteria2(config_response))
     result = go(make_client, session, tmp_path, key, bootstrap="create", hysteria2_links="include")
-    assert result.count == 1 and result.kinds == {"hysteria2": 1}
-    assert (layout(tmp_path)[1] / "sub.txt").read_text(encoding="utf-8").startswith("hysteria2://")
+    assert result.count == 1 and result.kinds == {"hysteria2": 1} and result.link_count == 1
+    assert sub_lines(tmp_path)[0].startswith("hysteria2://") and len(sub_lines(tmp_path)) == 1
+    assert json_protocols(tmp_path) == (["hysteria2"], ["hysteria"])
+
+
+def test_hysteria2_and_vless_with_links_omitted_keep_only_the_vless_link(make_session, make_client, tmp_path, key, config_response):
+    session = make_session(config=keep_types(config_response, "vless", "hysteria2x"))
+    result = go(make_client, session, tmp_path, key, bootstrap="create")
+    assert [line.split("://")[0] for line in sub_lines(tmp_path)] == ["vless"]
+    assert json_protocols(tmp_path) == (["vless", "hysteria2"], ["vless", "hysteria"])
+    assert result.link_count == 1 and result.links_omitted == 1
+
+
+def test_all_three_protocols_with_links_omitted_keep_two_links_and_three_json_entries(make_session, make_client, tmp_path, key):
+    result = go(make_client, make_session(), tmp_path, key, bootstrap="create", hysteria2_links="omit")
+    assert [line.split("://")[0] for line in sub_lines(tmp_path)] == ["ss", "vless"]
+    assert json_protocols(tmp_path) == (["shadowsocks", "vless", "hysteria2"], ["shadowsocks", "vless", "hysteria"])
+    assert result.link_count == 2 and result.links_omitted == 1
+
+
+def test_old_links_are_removed_when_sub_becomes_empty(make_session, make_client, tmp_path, key, config_response):
+    go(make_client, make_session(), tmp_path, key, bootstrap="create")
+    before = sub_lines(tmp_path)
+    assert len(before) == 2
+    session = make_session(config=only_hysteria2(config_response))
+    result = go(make_client, session, tmp_path, key)
+    out = layout(tmp_path)[1]
+    assert (out / "sub.txt").read_bytes() == b""
+    assert "sub.txt" in result.changed
+    assert json_protocols(tmp_path) == (["hysteria2"], ["hysteria"])
+    stale = [line.split("#")[0] for line in before]
+    assert not any(link in (out / "singbox.json").read_text(encoding="utf-8") for link in stale)
+
+
+def test_an_empty_sub_that_stays_empty_is_not_reported_as_changed(make_session, make_client, tmp_path, key, config_response):
+    go(make_client, make_session(config=only_hysteria2(config_response)), tmp_path, key, bootstrap="create")
+    result = go(make_client, make_session(config=only_hysteria2(config_response)), tmp_path, key)
+    assert result.changed == []
+
+
+def test_a_real_json_failure_keeps_the_previous_links_instead_of_emptying_them(make_session, make_client, tmp_path, key, monkeypatch, config_response):
+    go(make_client, make_session(), tmp_path, key, bootstrap="create")
+    before = snapshot(layout(tmp_path)[1])
+    assert before["sub.txt"] != b""
+
+    def broken(proxies):
+        raise ValidationError("xray builder failed")
+
+    monkeypatch.setattr(pipeline, "build_xray_config", broken)
+    with pytest.raises(ValidationError):
+        go(make_client, make_session(config=only_hysteria2(config_response)), tmp_path, key)
+    assert snapshot(layout(tmp_path)[1]) == before
+
+
+def test_an_unusable_response_keeps_the_previous_links_instead_of_emptying_them(make_session, make_client, tmp_path, key, config_response):
+    go(make_client, make_session(), tmp_path, key, bootstrap="create")
+    before = snapshot(layout(tmp_path)[1])
+    with pytest.raises(ValidationError):
+        go(make_client, make_session(config=keep_types(config_response, "samizdat")), tmp_path, key)
+    assert snapshot(layout(tmp_path)[1]) == before
+
+
+def test_the_json_files_are_never_empty_even_when_sub_is(make_session, make_client, tmp_path, key, config_response):
+    go(make_client, make_session(config=only_hysteria2(config_response)), tmp_path, key, bootstrap="create")
+    out = layout(tmp_path)[1]
+    assert (out / "singbox.json").stat().st_size > 0 and (out / "xray.json").stat().st_size > 0
 
 
 def test_exceeding_the_safety_ceiling_publishes_nothing_instead_of_truncating(make_session, make_client, tmp_path, key, monkeypatch):
