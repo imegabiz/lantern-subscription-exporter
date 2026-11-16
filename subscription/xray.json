@@ -38,26 +38,6 @@
   ],
   "outbounds": [
     {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "18.130.76.99",
-        "port": 443,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
-      },
-      "tag": "lantern-01-ss"
-    },
-    {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "63.185.24.101",
-        "port": 443,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
-      },
-      "tag": "lantern-02-ss"
-    },
-    {
       "protocol": "vless",
       "settings": {
         "address": "18.202.245.83",
@@ -75,13 +55,33 @@
           "password": "ZODw0ijKEfbSpHjvQqTyYzsbLpnlnA3j9Io5PfmZ-Ts"
         }
       },
-      "tag": "lantern-03-vless"
+      "tag": "lantern-01-vless"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "18.130.76.99",
+        "port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
+      },
+      "tag": "lantern-02-ss"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "63.185.24.101",
+        "port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
+      },
+      "tag": "lantern-03-ss"
     },
     {
       "protocol": "hysteria",
       "settings": {
         "version": 2,
-        "address": "172.239.236.15",
+        "address": "172.239.224.58",
         "port": 8443
       },
       "streamSettings": {
@@ -92,11 +92,11 @@
           "alpn": [
             "h3"
           ],
-          "pinnedPeerCertSha256": "fd8361b5a846d5024b8564bee77a46b201c7bd235ebe4e7a1b5e25eff3de0e27"
+          "pinnedPeerCertSha256": "88d100de52f9fc51897a6db00266186646fc1212b51870e5c8dc605465135a82"
         },
         "hysteriaSettings": {
           "version": 2,
-          "auth": "4e43a3d3d9a6b72d39ef0d80c18b2428e48a4bc4d00bcbf341624f088965e960"
+          "auth": "3076acd4c2f743cad66d8dbb32eeff0530cf185d0b7ab3e4c1781b2e33c14ead"
         },
         "finalmask": {
           "udp": [
@@ -134,7 +134,7 @@
         "selector": [
           "lantern-"
         ],
-        "fallbackTag": "lantern-01-ss",
+        "fallbackTag": "lantern-01-vless",
         "strategy": {
           "type": "leastPing"
         }
