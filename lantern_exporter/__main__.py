@@ -72,6 +72,8 @@ def main(argv=None):
         log.error("update failed, previous output kept: %s", exc)
         return 1
     log.info("usable configs: %d (share links: %d)", result.count, result.link_count)
+    if result.link_count == 0:
+        log.info("sub.txt was emptied because every usable config is Hysteria2 and its share links are disabled")
     if result.links_omitted:
         log.info("%d Hysteria2 config(s) were left out of sub.txt for security, see README", result.links_omitted)
     if result.junk_not_expressible:
