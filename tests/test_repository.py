@@ -202,6 +202,11 @@ def test_readme_documents_the_key_facts():
         "23 * * * *",
         "LANTERN_HYSTERIA2_LINKS",
         "public",
+        "packet encoding",
+        "empty (0 bytes)",
+        "vless_without_security",
+        "never written empty",
+        "X-Lantern-User-Id",
     ):
         assert fragment in text, fragment
 
