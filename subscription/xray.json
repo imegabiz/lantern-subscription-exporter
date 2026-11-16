@@ -68,16 +68,6 @@
       "tag": "lantern-02-ss"
     },
     {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "63.185.24.101",
-        "port": 443,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
-      },
-      "tag": "lantern-03-ss"
-    },
-    {
       "protocol": "hysteria",
       "settings": {
         "version": 2,
@@ -115,7 +105,17 @@
           ]
         }
       },
-      "tag": "lantern-04-hy2"
+      "tag": "lantern-03-hy2"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "3.122.241.248",
+        "port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
+      },
+      "tag": "lantern-04-ss"
     },
     {
       "tag": "direct",
