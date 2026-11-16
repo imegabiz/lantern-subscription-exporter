@@ -20,7 +20,7 @@ https://raw.githubusercontent.com/<your-user>/<your-repo>/main/subscription/xray
 
 ### Important: the files are public if the repository is public
 
-The subscription files contain working connection details: server addresses, passwords and keys of the Lantern proxies. In a public repository **anyone can read them**, and the Git history keeps every older version. They are Lantern's free shared proxies, not secrets, but they are not private either. Your own Lantern account data (device id, user id and token) is never written to these files; the exporter checks every file for it before publishing.
+The subscription files contain working connection details: server addresses, passwords and keys of the Lantern proxies. In a public repository **anyone can read them**, and the Git history keeps every older version. They are Lantern's free shared proxies, not secrets, but they are not private either. Your own Lantern account data (device id, user id and token) is never written to these files. Before publishing, the exporter checks every file for the device id and the token (as text), and for the user id under identifying names such as `user_id`, `userId` or `X-Lantern-User-Id` in JSON and in text. The user id is not searched as a bare number, so the same digits in a port or an IP address never cause a false alarm.
 
 ## Minimum client versions
 
@@ -48,6 +48,25 @@ Iranian traffic goes direct in `singbox.json` and `xray.json`: private networks,
 
 Lantern's own protocols such as `samizdat` cannot be used by any standard client and are skipped. Every run prints how many entries were skipped and why. Entries with options the exporter cannot express faithfully are skipped too, never silently rewritten.
 
+### What each output can and cannot express
+
+Nothing is added to a file that the client does not understand. A field that a core does not know is either ignored silently (Xray accepts unknown fields without a warning, which is why they are never invented) or rejected. Where a setting cannot be carried, it is listed here.
+
+| Setting from Lantern | `sub.txt` | `singbox.json` | `xray.json` |
+| --- | --- | --- | --- |
+| VLESS `packet_encoding` (`xudp`) | yes (`packetEncoding=xudp`) | yes | **no field exists.** Xray's VLESS outbound has no packet encoding option (checked in the source of 26.3.23 and 26.11.9). Xray always carries VLESS UDP as XUDP when the flow is `xtls-rprx-vision`, and by default otherwise (except ports 53 and 443). So `xudp` is what Xray does anyway; a source value of "no packet encoding" cannot be requested from the JSON file. |
+| VLESS explicit `network: tcp` (UDP disabled) | no | yes | no |
+| Hysteria2 `pre_initial_junk` | no | no | yes (see below) |
+| Hysteria2 certificate | pin, only when links are enabled | embedded and verified | pinned |
+| VLESS TLS without a server name | accepted, no `sni` parameter | accepted | accepted, no `serverName` |
+| VLESS Reality without a server name | rejected | rejected | rejected |
+
+Hiddify adds `xudp` to every VLESS link, with or without the `packetEncoding` parameter (tested with Hiddify core 5.9.1), so a plain packet encoding cannot be requested there either.
+
+### VLESS without any transport security
+
+A VLESS config with neither TLS nor Reality has no encryption at all. Xray 26.11.9 refuses to load a whole configuration that contains one for a public address (the error is "vless without TLS or other encryption is prohibited unless the server address is a private IP or domain"; Xray 26.3.23 does not check this). To keep one odd entry from breaking the whole `xray.json`, such an entry is rejected with the reason `vless_without_security` unless its server is a private, loopback or link-local IP address. Lantern's own servers use Reality, so this does not affect them.
+
 ### Hysteria2 versus Hysteria2x
 
 `hysteria2x` is a stock Hysteria2 server with a client-side evasion called `pre_initial_junk`: before the QUIC handshake the client sends one random 8 to 64 byte UDP datagram, so that censors which only inspect the first packet of a UDP flow cannot read the server name. Lantern documents the value `false` as the default, and so does this project: a missing or `null` value means `false`.
@@ -68,7 +87,7 @@ The Hysteria2 servers use a self-signed certificate. The exporter parses it, che
 - `singbox.json`: the certificate itself is embedded and used as the only trust anchor. A server with another certificate is rejected (tested).
 - Share links: a link can only say `insecure=1&pinSHA256=...`. **v2rayNG applies the pin** (its source turns the insecure flag off when a pin is present). **Hiddify ignores the pin** (tested with Hiddify core 5.9.1: the imported outbound has `insecure` set and no pin), which means TLS verification is simply off for that connection and a network attacker could impersonate the server.
 
-Because a single public `sub.txt` is used by many different clients, Hysteria2 links are **left out of `sub.txt` by default**. Hiddify users should import `singbox.json`, v2rayNG users can use `xray.json`. If you accept the risk for your audience you can turn the links on: in the repository go to **Settings → Secrets and variables → Actions → Variables → New repository variable**, name `LANTERN_HYSTERIA2_LINKS`, value `include`.
+Because a single public `sub.txt` is used by many different clients, Hysteria2 links are **left out of `sub.txt` by default**. If Hysteria2 is the only protocol in a response, `sub.txt` is published **empty (0 bytes)** while `singbox.json` and `xray.json` are still published; the old links are removed so that nobody keeps using stale servers. `sub.txt` is the only file that may be empty. The two JSON files are never written empty. Hiddify users should import `singbox.json`, v2rayNG users can use `xray.json`. If you accept the risk for your audience you can turn the links on: in the repository go to **Settings → Secrets and variables → Actions → Variables → New repository variable**, name `LANTERN_HYSTERIA2_LINKS`, value `include`.
 
 ## Account state: how it is kept safe
 
