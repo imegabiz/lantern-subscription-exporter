@@ -30,6 +30,19 @@ FINGERPRINTS = frozenset(
     {"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}
 )
 PACKET_ENCODINGS = ("", "xudp")
+LOCAL_NETWORKS = tuple(
+    ipaddress.ip_network(network)
+    for network in (
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "fc00::/7",
+        "127.0.0.0/8",
+        "::1/128",
+        "169.254.0.0/16",
+        "fe80::/10",
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -135,6 +148,14 @@ def _normalize_tls(raw):
     return tls
 
 
+def _is_local_address(host):
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return any(address in network for network in LOCAL_NETWORKS if network.version == address.version)
+
+
 def _normalize_vless(raw, now):
     _check_keys(raw, VLESS_KEYS)
     if raw.get("network") not in (None, "tcp"):
@@ -167,6 +188,8 @@ def _normalize_vless(raw, now):
         outbound["tls"] = _normalize_tls(raw["tls"])
     elif flow:
         raise _Reject("flow_without_tls")
+    elif not _is_local_address(outbound["server"]):
+        raise _Reject("vless_without_security")
     return outbound
 
 
