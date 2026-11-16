@@ -53,10 +53,15 @@ def _vless(outbound):
         return {"protocol": "vless", "settings": settings, "streamSettings": {"network": "raw"}}
     reality = tls.get("reality")
     if not reality:
-        stream = {"network": "raw", "security": "tls", "tlsSettings": {"serverName": tls["server_name"]}}
+        tls_settings = {}
+        if tls.get("server_name"):
+            tls_settings["serverName"] = tls["server_name"]
         if tls.get("utls"):
-            stream["tlsSettings"]["fingerprint"] = tls["utls"]["fingerprint"]
+            tls_settings["fingerprint"] = tls["utls"]["fingerprint"]
+        stream = {"network": "raw", "security": "tls", "tlsSettings": tls_settings}
         return {"protocol": "vless", "settings": settings, "streamSettings": stream}
+    if not tls.get("server_name") or not tls.get("utls"):
+        raise ValidationError("a reality config needs a server name and a fingerprint")
     reality_settings = {
         "serverName": tls["server_name"],
         "fingerprint": tls["utls"]["fingerprint"],
