@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -89,14 +90,62 @@ def fetch_with_saved_account(client, state):
         raise
 
 
+USER_ID_KEYS = frozenset({"userid", "lanternuserid", "xlanternuserid"})
+
+
+def _normalized_key(key):
+    return re.sub(r"[^a-z0-9]", "", key.lower())
+
+
+def _is_user_id(value, user_id):
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return value == user_id
+    if isinstance(value, str):
+        return value.strip() == str(user_id)
+    return False
+
+
+def _json_exposes_user_id(document, user_id):
+    pending = [document]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            for key, child in item.items():
+                if isinstance(key, str) and _normalized_key(key) in USER_ID_KEYS and _is_user_id(child, user_id):
+                    return True
+                pending.append(child)
+        elif isinstance(item, list):
+            pending.extend(item)
+    return False
+
+
+def _text_exposes_user_id(text, user_id):
+    pattern = re.compile(
+        r"(?<![a-z0-9_-])(?:x[-_]?lantern[-_]?)?user[-_]?id(?![a-z0-9])[\"']?\s*[:=]\s*[\"']?%d(?![0-9a-z])" % user_id,
+        re.IGNORECASE,
+    )
+    return pattern.search(text) is not None
+
+
 def ensure_no_state_in_files(files, state):
     token = state.token.encode("utf-8")
-    secrets = [state.device_id.encode("utf-8")]
-    secrets.append(token if len(token) >= 8 else b'"' + token + b'"')
+    secrets = {"device id": state.device_id.encode("utf-8")}
+    secrets["token"] = token if len(token) >= 8 else b'"' + token + b'"'
     for name, content in files.items():
-        for secret in secrets:
+        for label, secret in secrets.items():
             if secret and secret in content:
-                raise ValidationError("account data was found in %s, refusing to publish" % name)
+                raise ValidationError("account data (%s) was found in %s, refusing to publish" % (label, name))
+        text = content.decode("utf-8", errors="replace")
+        exposed = _text_exposes_user_id(text, state.user_id)
+        if not exposed:
+            try:
+                exposed = _json_exposes_user_id(json.loads(text), state.user_id)
+            except ValueError:
+                exposed = False
+        if exposed:
+            raise ValidationError("account data (user id) was found in %s, refusing to publish" % name)
 
 
 def render(extraction, min_configs, hysteria2_links=C.DEFAULT_HYSTERIA2_LINKS):
@@ -117,16 +166,11 @@ def render(extraction, min_configs, hysteria2_links=C.DEFAULT_HYSTERIA2_LINKS):
         if proxy.kind != "hysteria2" or hysteria2_links == "include"
     ]
     omitted = len(proxies) - len(pairs)
-    if not pairs:
-        raise ValidationError(
-            "no usable config can be published as a share link; Hysteria2 links are %s by default "
-            "because Hiddify ignores the certificate pin" % ("omitted" if hysteria2_links == "omit" else "disabled")
-        )
     links = [build_link(proxy, name) for proxy, name in pairs]
     profile = build_profile(proxies, names)
     xray_config = build_xray_config(proxies)
     files = {
-        C.SUBSCRIPTION_LINKS_FILE: ("\n".join(links) + "\n").encode("utf-8"),
+        C.SUBSCRIPTION_LINKS_FILE: ("\n".join(links) + "\n").encode("utf-8") if links else b"",
         C.SUBSCRIPTION_SINGBOX_FILE: render_profile(profile),
         C.SUBSCRIPTION_XRAY_FILE: render_xray_config(xray_config),
     }
@@ -179,7 +223,7 @@ def run(
     )
     files, omitted = render(extraction, min_configs, hysteria2_links)
     ensure_no_state_in_files(files, state)
-    changed = write_files(Path(output_dir), files)
+    changed = write_files(Path(output_dir), files, allow_empty=(C.SUBSCRIPTION_LINKS_FILE,))
     junk = sum(1 for p in extraction.proxies if p.kind == "hysteria2" and p.outbound.get("pre_initial_junk"))
     return Result(
         count=len(extraction.proxies),
