@@ -22,12 +22,12 @@ def _atomic_write(directory, target, content):
         raise
 
 
-def write_files(directory, files):
+def write_files(directory, files, allow_empty=()):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     pending = []
     for name, content in files.items():
-        if not isinstance(content, bytes) or not content:
+        if not isinstance(content, bytes) or (not content and name not in allow_empty):
             raise OutputError("refusing to write empty content for %s" % name)
         target = directory / name
         try:
