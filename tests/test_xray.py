@@ -193,3 +193,72 @@ def test_a_replaced_server_certificate_changes_the_pin(proxies):
 def test_no_private_key_or_pem_reaches_the_xray_config(proxies):
     text = render_config(build_config(proxies)).decode("utf-8")
     assert "PRIVATE KEY" not in text and "BEGIN CERTIFICATE" not in text
+
+
+def _vless_raw(**changes):
+    base = {
+        "type": "vless",
+        "tag": "v",
+        "server": "192.0.2.2",
+        "server_port": 443,
+        "uuid": "11111111-2222-4333-8444-555555555555",
+        "flow": "xtls-rprx-vision",
+        "tls": {
+            "enabled": True,
+            "server_name": "www.example.com",
+            "utls": {"enabled": True, "fingerprint": "chrome"},
+            "reality": {"enabled": True, "public_key": "A" * 43, "short_id": "0011aabb"},
+        },
+    }
+    base.update(changes)
+    return base
+
+
+def _vless_xray(**changes):
+    from lantern_exporter.extract import extract as run_extract
+
+    proxies = run_extract({"options": {"outbounds": [_vless_raw(**changes)]}}).proxies
+    return build_config(proxies)["outbounds"][0]
+
+
+def test_vless_without_packet_encoding_matches_the_golden_json():
+    assert _vless_xray() == {
+        "protocol": "vless",
+        "settings": {
+            "address": "192.0.2.2",
+            "port": 443,
+            "id": "11111111-2222-4333-8444-555555555555",
+            "encryption": "none",
+            "flow": "xtls-rprx-vision",
+        },
+        "streamSettings": {
+            "network": "raw",
+            "security": "reality",
+            "realitySettings": {
+                "serverName": "www.example.com",
+                "fingerprint": "chrome",
+                "password": "A" * 43,
+                "shortId": "0011aabb",
+            },
+        },
+        "tag": "lantern-01-vless",
+    }
+
+
+def test_vless_with_xudp_is_identical_because_xray_has_no_such_field():
+    assert _vless_xray(packet_encoding="xudp") == _vless_xray()
+
+
+@pytest.mark.parametrize("value", ["xudp", "", None])
+def test_no_packet_encoding_field_or_value_ever_appears_in_the_xray_json(value):
+    changes = {} if value is None else {"packet_encoding": value}
+    from lantern_exporter.extract import extract as run_extract
+
+    proxies = run_extract({"options": {"outbounds": [_vless_raw(**changes)]}}).proxies
+    text = render_config(build_config(proxies)).decode("utf-8").lower()
+    assert "packetencoding" not in text and "packet_encoding" not in text and "xudp" not in text
+
+
+def test_the_other_vless_shapes_do_not_change_when_packet_encoding_is_present():
+    for changes in ({"flow": ""}, {"tls": {"enabled": True}}, {"tls": {"enabled": True, "server_name": "a.example.com"}}):
+        assert _vless_xray(packet_encoding="xudp", **changes) == _vless_xray(**changes)
