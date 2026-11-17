@@ -45,10 +45,10 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
-        "🇳🇱 Netherlands · Amsterdam · HY2",
-        "🇩🇪 Germany · Frankfurt · SS",
         "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇩🇪 Germany · Frankfurt · SS #2"
+        "🇩🇪 Germany · Frankfurt · SS",
+        "🇩🇪 Germany · Frankfurt · SS #2",
+        "🇳🇱 Netherlands · Amsterdam · HY2"
       ],
       "default": "👽 Anonymous Lantern 🌐"
     },
@@ -56,52 +56,19 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
-        "🇳🇱 Netherlands · Amsterdam · HY2",
-        "🇩🇪 Germany · Frankfurt · SS",
         "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇩🇪 Germany · Frankfurt · SS #2"
+        "🇩🇪 Germany · Frankfurt · SS",
+        "🇩🇪 Germany · Frankfurt · SS #2",
+        "🇳🇱 Netherlands · Amsterdam · HY2"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
       "tolerance": 50
     },
     {
-      "type": "hysteria2",
-      "tag": "🇳🇱 Netherlands · Amsterdam · HY2",
-      "server": "172.239.224.58",
-      "server_port": 8443,
-      "password": "3076acd4c2f743cad66d8dbb32eeff0530cf185d0b7ab3e4c1781b2e33c14ead",
-      "tls": {
-        "enabled": true,
-        "server_name": "api.push.apple.com",
-        "certificate": [
-          "-----BEGIN CERTIFICATE-----",
-          "MIIBsTCCAVegAwIBAgIRAK9AFvFp+kdn+n2OLhQBwWgwCgYIKoZIzj0EAwIwLDEq",
-          "MCgGA1UEAxMhYnJvYWRzd29yZCdzIGluc2NvbmNlcyB1bmludmVydGVkMB4XDTI2",
-          "MDYxMTAzNDUwOFoXDTM3MDYwODAzNDUwOFowLDEqMCgGA1UEAxMhYnJvYWRzd29y",
-          "ZCdzIGluc2NvbmNlcyB1bmludmVydGVkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcD",
-          "QgAESAw4lcc6wvZtp8R9GVGPgO7lELwPofzrs99+EmUdrQhKZSZ5yHgDBcrKgXnC",
-          "0jbtRm5XvYqsjBkJvTOmZcx8TqNaMFgwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQM",
-          "MAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwIwYDVR0RBBwwGoISYXBpLnB1c2gu",
-          "YXBwbGUuY29thwSs7+A6MAoGCCqGSM49BAMCA0gAMEUCIQD8M1u4XrIk1atO0NCO",
-          "tE0F8pGEIRnKxqOACfPASIcMqgIgfUb840TiiwVWC7l8CSp/t+OwDuVmgrnEFhMc",
-          "fMicD4M=",
-          "-----END CERTIFICATE-----"
-        ]
-      }
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS",
-      "server": "18.134.253.71",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
-    },
-    {
       "type": "vless",
       "tag": "🇩🇪 Germany · Frankfurt · VLESS",
-      "server": "34.244.228.47",
+      "server": "108.131.45.109",
       "server_port": 443,
       "uuid": "fad6c240-14d0-47ce-9264-21c5f18689c1",
       "flow": "xtls-rprx-vision",
@@ -120,11 +87,44 @@
     },
     {
       "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS #2",
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
       "server": "3.122.241.248",
       "server_port": 443,
       "method": "2022-blake3-chacha20-poly1305",
       "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS #2",
+      "server": "18.134.253.71",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
+    },
+    {
+      "type": "hysteria2",
+      "tag": "🇳🇱 Netherlands · Amsterdam · HY2",
+      "server": "172.239.236.146",
+      "server_port": 8443,
+      "password": "a865394dab775ef6449a7e3133242ccd184c1b4e0500ea9c38e7493557d07975",
+      "tls": {
+        "enabled": true,
+        "server_name": "api.push.apple.com",
+        "certificate": [
+          "-----BEGIN CERTIFICATE-----",
+          "MIIBvTCCAWOgAwIBAgIRAK+hRAJeGsvnjptGLKw57GMwCgYIKoZIzj0EAwIwMjEw",
+          "MC4GA1UEAxMnY3Vydmllc3QgZ29sbGl3b2cgdmFjY2luaXphdGlvbiBkZW1vZGVk",
+          "MB4XDTI2MDUyMjAyMDc1M1oXDTM3MDUxOTAyMDc1M1owMjEwMC4GA1UEAxMnY3Vy",
+          "dmllc3QgZ29sbGl3b2cgdmFjY2luaXphdGlvbiBkZW1vZGVkMFkwEwYHKoZIzj0C",
+          "AQYIKoZIzj0DAQcDQgAEcFiMSuJj2w1lBw9ESDVIweAQkcD0sSWpbPZnejJlOYJF",
+          "tkK3bgWpkl1rMPM2kHHEMcHxpcM1gvdjBPb8O/2HX6NaMFgwDgYDVR0PAQH/BAQD",
+          "AgWgMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwIwYDVR0RBBww",
+          "GoISYXBpLnB1c2guYXBwbGUuY29thwSs7+ySMAoGCCqGSM49BAMCA0gAMEUCICMu",
+          "rG8TxdVRdvo2asatl0ohxQ9bFb/0GfU5y5w9sEpVAiEA1MbSCJPX4aaY6wGUugTc",
+          "UQFgNButEDQPGDF0FlZXO80=",
+          "-----END CERTIFICATE-----"
+        ]
+      }
     },
     {
       "type": "direct",
