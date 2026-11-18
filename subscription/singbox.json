@@ -47,8 +47,8 @@
         "👽 Anonymous Lantern 🌐",
         "🇩🇪 Germany · Frankfurt · VLESS",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇩🇪 Germany · Frankfurt · SS #2",
-        "🇳🇱 Netherlands · Amsterdam · HY2"
+        "🇳🇱 Netherlands · Amsterdam · HY2",
+        "🇩🇪 Germany · Frankfurt · SS #2"
       ],
       "default": "👽 Anonymous Lantern 🌐"
     },
@@ -58,8 +58,8 @@
       "outbounds": [
         "🇩🇪 Germany · Frankfurt · VLESS",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇩🇪 Germany · Frankfurt · SS #2",
-        "🇳🇱 Netherlands · Amsterdam · HY2"
+        "🇳🇱 Netherlands · Amsterdam · HY2",
+        "🇩🇪 Germany · Frankfurt · SS #2"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
@@ -68,7 +68,7 @@
     {
       "type": "vless",
       "tag": "🇩🇪 Germany · Frankfurt · VLESS",
-      "server": "108.131.45.109",
+      "server": "3.254.164.168",
       "server_port": 443,
       "uuid": "fad6c240-14d0-47ce-9264-21c5f18689c1",
       "flow": "xtls-rprx-vision",
@@ -94,14 +94,6 @@
       "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
     },
     {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS #2",
-      "server": "18.134.253.71",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
-    },
-    {
       "type": "hysteria2",
       "tag": "🇳🇱 Netherlands · Amsterdam · HY2",
       "server": "172.239.236.146",
@@ -125,6 +117,14 @@
           "-----END CERTIFICATE-----"
         ]
       }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS #2",
+      "server": "18.134.253.71",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "Cg2Dw4OhdBZhqbeO9ZTA3g/Gk/AvsrYZGhAJeGnQIx4="
     },
     {
       "type": "direct",
