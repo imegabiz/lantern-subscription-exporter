@@ -45,9 +45,9 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
+        "🇳🇱 Netherlands · Amsterdam · HY2",
         "🇩🇪 Germany · Frankfurt · VLESS",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇳🇱 Netherlands · Amsterdam · HY2",
         "🇩🇪 Germany · Frankfurt · SS #2"
       ],
       "default": "👽 Anonymous Lantern 🌐"
@@ -56,14 +56,38 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
+        "🇳🇱 Netherlands · Amsterdam · HY2",
         "🇩🇪 Germany · Frankfurt · VLESS",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇳🇱 Netherlands · Amsterdam · HY2",
         "🇩🇪 Germany · Frankfurt · SS #2"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
       "tolerance": 50
+    },
+    {
+      "type": "hysteria2",
+      "tag": "🇳🇱 Netherlands · Amsterdam · HY2",
+      "server": "172.239.224.12",
+      "server_port": 8443,
+      "password": "341816473bcdc2f8500313f1ca6cbd9a4f10d4a10cc4c3e0ff53db98e08b45b3",
+      "tls": {
+        "enabled": true,
+        "server_name": "api.push.apple.com",
+        "certificate": [
+          "-----BEGIN CERTIFICATE-----",
+          "MIIBqDCCAU6gAwIBAgIQXNgxBvlRET4ZcUhpki7fQzAKBggqhkjOPQQDAjAoMRMw",
+          "EQYDVQQKEwpoZW1hdG9pZGluMREwDwYDVQQDEwhsZXBvY3l0ZTAeFw0yNjA2MjIw",
+          "MTQwNDFaFw0zNzA2MTkwMTQwNDFaMCgxEzARBgNVBAoTCmhlbWF0b2lkaW4xETAP",
+          "BgNVBAMTCGxlcG9jeXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFquv4cFx",
+          "/LSfyAaXoYlc5Sf2dDl32NKlqWZBzwPdE605LY2mNbc6ZShUAj3XcFHGkprun55s",
+          "Y4LYhmlg/Whzr6NaMFgwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoGCCsGAQUF",
+          "BwMBMAwGA1UdEwEB/wQCMAAwIwYDVR0RBBwwGoISYXBpLnB1c2guYXBwbGUuY29t",
+          "hwSs7+AMMAoGCCqGSM49BAMCA0gAMEUCIQCasn4fqsIoRK5uh2Ppcws2e+5oKa6D",
+          "JSR6JaBG/7bj7wIgTG5FSEhPtaHaAFTW06wMr4t+Zbs5WibxYQgtOIEcz1c=",
+          "-----END CERTIFICATE-----"
+        ]
+      }
     },
     {
       "type": "vless",
@@ -92,31 +116,6 @@
       "server_port": 443,
       "method": "2022-blake3-chacha20-poly1305",
       "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
-    },
-    {
-      "type": "hysteria2",
-      "tag": "🇳🇱 Netherlands · Amsterdam · HY2",
-      "server": "172.239.236.146",
-      "server_port": 8443,
-      "password": "a865394dab775ef6449a7e3133242ccd184c1b4e0500ea9c38e7493557d07975",
-      "tls": {
-        "enabled": true,
-        "server_name": "api.push.apple.com",
-        "certificate": [
-          "-----BEGIN CERTIFICATE-----",
-          "MIIBvTCCAWOgAwIBAgIRAK+hRAJeGsvnjptGLKw57GMwCgYIKoZIzj0EAwIwMjEw",
-          "MC4GA1UEAxMnY3Vydmllc3QgZ29sbGl3b2cgdmFjY2luaXphdGlvbiBkZW1vZGVk",
-          "MB4XDTI2MDUyMjAyMDc1M1oXDTM3MDUxOTAyMDc1M1owMjEwMC4GA1UEAxMnY3Vy",
-          "dmllc3QgZ29sbGl3b2cgdmFjY2luaXphdGlvbiBkZW1vZGVkMFkwEwYHKoZIzj0C",
-          "AQYIKoZIzj0DAQcDQgAEcFiMSuJj2w1lBw9ESDVIweAQkcD0sSWpbPZnejJlOYJF",
-          "tkK3bgWpkl1rMPM2kHHEMcHxpcM1gvdjBPb8O/2HX6NaMFgwDgYDVR0PAQH/BAQD",
-          "AgWgMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwIwYDVR0RBBww",
-          "GoISYXBpLnB1c2guYXBwbGUuY29thwSs7+ySMAoGCCqGSM49BAMCA0gAMEUCICMu",
-          "rG8TxdVRdvo2asatl0ohxQ9bFb/0GfU5y5w9sEpVAiEA1MbSCJPX4aaY6wGUugTc",
-          "UQFgNButEDQPGDF0FlZXO80=",
-          "-----END CERTIFICATE-----"
-        ]
-      }
     },
     {
       "type": "shadowsocks",
