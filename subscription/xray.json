@@ -38,16 +38,6 @@
   ],
   "outbounds": [
     {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "8.209.117.187",
-        "port": 443,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
-      },
-      "tag": "lantern-01-ss"
-    },
-    {
       "protocol": "vless",
       "settings": {
         "address": "54.75.112.120",
@@ -65,7 +55,17 @@
           "password": "ZODw0ijKEfbSpHjvQqTyYzsbLpnlnA3j9Io5PfmZ-Ts"
         }
       },
-      "tag": "lantern-02-vless"
+      "tag": "lantern-01-vless"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "3.122.241.248",
+        "port": 443,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "8yO3ANWefuuGs1lRKXECQA1FEhxlWFV2ppQMcBaZo5Y="
+      },
+      "tag": "lantern-02-ss"
     },
     {
       "protocol": "hysteria",
@@ -134,7 +134,7 @@
         "selector": [
           "lantern-"
         ],
-        "fallbackTag": "lantern-01-ss",
+        "fallbackTag": "lantern-01-vless",
         "strategy": {
           "type": "leastPing"
         }
