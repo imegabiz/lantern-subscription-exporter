@@ -38,21 +38,32 @@
   ],
   "outbounds": [
     {
-      "protocol": "shadowsocks",
+      "protocol": "vless",
       "settings": {
-        "address": "163.176.115.39",
-        "port": 59319,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "tx/rhFdwmzfeHL2EPqr7nlzKxeRlbZHvya93pKXRxzc="
+        "address": "82.158.120.124",
+        "port": 58218,
+        "id": "ed9e71f3-1781-400e-940d-fb05f80bae53",
+        "encryption": "none",
+        "flow": "xtls-rprx-vision"
       },
-      "tag": "lantern-01-ss"
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.cloudflare.com",
+          "fingerprint": "chrome",
+          "password": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
+          "shortId": "1f2519bb96e5589c"
+        }
+      },
+      "tag": "lantern-01-vless"
     },
     {
       "protocol": "vless",
       "settings": {
-        "address": "148.116.105.86",
-        "port": 58159,
-        "id": "b415bce6-33ad-443d-9b66-ec1d44242cdf",
+        "address": "172.235.237.26",
+        "port": 63326,
+        "id": "b415bd2f-2fbd-4202-8826-3eec2de7bc95",
         "encryption": "none",
         "flow": "xtls-rprx-vision"
       },
@@ -69,33 +80,22 @@
       "tag": "lantern-02-vless"
     },
     {
-      "protocol": "vless",
+      "protocol": "shadowsocks",
       "settings": {
-        "address": "40.233.17.203",
-        "port": 61902,
-        "id": "f55b18a8-4845-45da-a4a9-dc5640aeb8c0",
-        "encryption": "none",
-        "flow": "xtls-rprx-vision"
+        "address": "163.176.111.75",
+        "port": 59319,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "HrsiiYoiaOGzoOjp02xkatPEHGQNB9FC1vU905AxJ5M="
       },
-      "streamSettings": {
-        "network": "raw",
-        "security": "reality",
-        "realitySettings": {
-          "serverName": "www.cloudflare.com",
-          "fingerprint": "chrome",
-          "password": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
-          "shortId": "1f2519bb96e5589c"
-        }
-      },
-      "tag": "lantern-03-vless"
+      "tag": "lantern-03-ss"
     },
     {
       "protocol": "shadowsocks",
       "settings": {
-        "address": "129.151.94.90",
-        "port": 61312,
+        "address": "47.252.43.236",
+        "port": 443,
         "method": "2022-blake3-chacha20-poly1305",
-        "password": "m6Qe5Wnca1A0uZoCIDjkVMyt1I1sCb1vultq5Qj0Ksk="
+        "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
       },
       "tag": "lantern-04-ss"
     },
@@ -147,7 +147,7 @@
         "selector": [
           "lantern-"
         ],
-        "fallbackTag": "lantern-01-ss",
+        "fallbackTag": "lantern-01-vless",
         "strategy": {
           "type": "leastPing"
         }
