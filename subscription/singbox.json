@@ -45,12 +45,12 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
-        "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇮🇹 Italy · Milan · VLESS",
-        "🇧🇷 Brazil · São Paulo · SS",
-        "🇩🇪 Germany · Frankfurt · SS",
         "🇺🇸 U.S.A. · Phoenix · SS",
-        "🇳🇱 Netherlands · Amsterdam · VLESS"
+        "🇳🇱 Netherlands · Amsterdam · SS",
+        "🇧🇷 Brazil · São Paulo · SS",
+        "🇸🇪 Sweden · Stockholm · VLESS",
+        "🇮🇹 Italy · Milan · VLESS",
+        "🇬🇧 United Kingdom · Cardiff · SS"
       ],
       "default": "👽 Anonymous Lantern 🌐"
     },
@@ -58,23 +58,47 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
-        "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇮🇹 Italy · Milan · VLESS",
-        "🇧🇷 Brazil · São Paulo · SS",
-        "🇩🇪 Germany · Frankfurt · SS",
         "🇺🇸 U.S.A. · Phoenix · SS",
-        "🇳🇱 Netherlands · Amsterdam · VLESS"
+        "🇳🇱 Netherlands · Amsterdam · SS",
+        "🇧🇷 Brazil · São Paulo · SS",
+        "🇸🇪 Sweden · Stockholm · VLESS",
+        "🇮🇹 Italy · Milan · VLESS",
+        "🇬🇧 United Kingdom · Cardiff · SS"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
       "tolerance": 50
     },
     {
+      "type": "shadowsocks",
+      "tag": "🇺🇸 U.S.A. · Phoenix · SS",
+      "server": "129.146.75.79",
+      "server_port": 50356,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "qDq7qkpssdZU1MvROxoIbyXzFPlW04qCbAmBMf7rALo="
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇳🇱 Netherlands · Amsterdam · SS",
+      "server": "141.144.195.206",
+      "server_port": 45819,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "rviccPvrrvB/ATFyChg0/Onws2hz6I87hjKLMhOFqow="
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇧🇷 Brazil · São Paulo · SS",
+      "server": "163.176.112.145",
+      "server_port": 59319,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "Ic+OAC77+mKdy0qMwPPjzkeu5dXrNYYa+hCdEXx3P2U="
+    },
+    {
       "type": "vless",
-      "tag": "🇩🇪 Germany · Frankfurt · VLESS",
-      "server": "82.158.120.124",
-      "server_port": 58218,
-      "uuid": "ed9e71f3-1781-400e-940d-fb05f80bae53",
+      "tag": "🇸🇪 Sweden · Stockholm · VLESS",
+      "server": "79.76.33.170",
+      "server_port": 59302,
+      "uuid": "f77dac6a-0c39-44cb-a12e-d453f685ca53",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -113,48 +137,11 @@
     },
     {
       "type": "shadowsocks",
-      "tag": "🇧🇷 Brazil · São Paulo · SS",
-      "server": "163.176.111.75",
-      "server_port": 59319,
+      "tag": "🇬🇧 United Kingdom · Cardiff · SS",
+      "server": "129.151.82.249",
+      "server_port": 61312,
       "method": "2022-blake3-chacha20-poly1305",
-      "password": "HrsiiYoiaOGzoOjp02xkatPEHGQNB9FC1vU905AxJ5M="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS",
-      "server": "47.252.43.236",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇺🇸 U.S.A. · Phoenix · SS",
-      "server": "129.146.75.79",
-      "server_port": 50356,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "qDq7qkpssdZU1MvROxoIbyXzFPlW04qCbAmBMf7rALo="
-    },
-    {
-      "type": "vless",
-      "tag": "🇳🇱 Netherlands · Amsterdam · VLESS",
-      "server": "193.123.39.151",
-      "server_port": 62765,
-      "uuid": "abd15f27-0ad8-4b8b-9f61-7a8533173518",
-      "flow": "xtls-rprx-vision",
-      "tls": {
-        "enabled": true,
-        "server_name": "www.cloudflare.com",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
-          "short_id": "1f2519bb96e5589c"
-        }
-      }
+      "password": "L35ZoQjjihDmVI3YcDK0UMgcjpoxdMtVDStV2NH74xw="
     },
     {
       "type": "direct",
