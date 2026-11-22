@@ -45,12 +45,12 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
-        "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇺🇸 U.S.A. · Ashburn · VLESS",
-        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇸🇪 Sweden · Stockholm · VLESS",
         "🇧🇷 Brazil · São Paulo · SS",
+        "🇮🇹 Italy · Milan · VLESS",
+        "🇬🇧 United Kingdom · Cardiff · SS",
         "🇳🇱 Netherlands · Amsterdam · VLESS",
-        "🇰🇿 Kazakhstan · Almaty · VLESS"
+        "🇩🇪 Germany · Frankfurt · SS"
       ],
       "default": "👽 Anonymous Lantern 🌐"
     },
@@ -58,12 +58,12 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
-        "🇩🇪 Germany · Frankfurt · VLESS",
-        "🇺🇸 U.S.A. · Ashburn · VLESS",
-        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇸🇪 Sweden · Stockholm · VLESS",
         "🇧🇷 Brazil · São Paulo · SS",
+        "🇮🇹 Italy · Milan · VLESS",
+        "🇬🇧 United Kingdom · Cardiff · SS",
         "🇳🇱 Netherlands · Amsterdam · VLESS",
-        "🇰🇿 Kazakhstan · Almaty · VLESS"
+        "🇩🇪 Germany · Frankfurt · SS"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
@@ -71,10 +71,10 @@
     },
     {
       "type": "vless",
-      "tag": "🇩🇪 Germany · Frankfurt · VLESS",
-      "server": "82.158.120.124",
-      "server_port": 58218,
-      "uuid": "ed9e71f3-1781-400e-940d-fb05f80bae53",
+      "tag": "🇸🇪 Sweden · Stockholm · VLESS",
+      "server": "158.179.205.178",
+      "server_port": 65446,
+      "uuid": "1852bf29-55ab-4e45-b7d2-8192573afa4f",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -91,11 +91,19 @@
       }
     },
     {
+      "type": "shadowsocks",
+      "tag": "🇧🇷 Brazil · São Paulo · SS",
+      "server": "144.22.168.108",
+      "server_port": 59319,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "JlYWfyPGeC3bYDcl2hJCsgODec36rua5YToLCxcgrEM="
+    },
+    {
       "type": "vless",
-      "tag": "🇺🇸 U.S.A. · Ashburn · VLESS",
-      "server": "172.233.197.105",
-      "server_port": 62867,
-      "uuid": "1ad82982-f3e1-4b6b-99bf-a9cfdf186b96",
+      "tag": "🇮🇹 Italy · Milan · VLESS",
+      "server": "172.232.200.238",
+      "server_port": 62708,
+      "uuid": "b39ac142-7fbb-4f9d-b691-3faa32e3dc4a",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -120,19 +128,11 @@
       "password": "L35ZoQjjihDmVI3YcDK0UMgcjpoxdMtVDStV2NH74xw="
     },
     {
-      "type": "shadowsocks",
-      "tag": "🇧🇷 Brazil · São Paulo · SS",
-      "server": "163.176.112.145",
-      "server_port": 59319,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "Ic+OAC77+mKdy0qMwPPjzkeu5dXrNYYa+hCdEXx3P2U="
-    },
-    {
       "type": "vless",
       "tag": "🇳🇱 Netherlands · Amsterdam · VLESS",
-      "server": "193.123.39.151",
-      "server_port": 62765,
-      "uuid": "abd15f27-0ad8-4b8b-9f61-7a8533173518",
+      "server": "141.148.242.199",
+      "server_port": 64452,
+      "uuid": "132aa744-404b-4797-be70-e9a9d1d8b93a",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -149,25 +149,12 @@
       }
     },
     {
-      "type": "vless",
-      "tag": "🇰🇿 Kazakhstan · Almaty · VLESS",
-      "server": "45.82.31.85",
-      "server_port": 63100,
-      "uuid": "df24f582-a3b6-4a59-97d6-8a124b7a6f82",
-      "flow": "xtls-rprx-vision",
-      "tls": {
-        "enabled": true,
-        "server_name": "www.cloudflare.com",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
-          "short_id": "1f2519bb96e5589c"
-        }
-      }
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
+      "server": "47.85.238.210",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
     },
     {
       "type": "direct",
