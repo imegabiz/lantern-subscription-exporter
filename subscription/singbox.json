@@ -46,10 +46,10 @@
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
         "🇺🇸 U.S.A. · Phoenix · SS",
-        "🇳🇱 Netherlands · Amsterdam · SS",
-        "🇧🇷 Brazil · São Paulo · SS",
-        "🇸🇪 Sweden · Stockholm · VLESS",
-        "🇮🇹 Italy · Milan · VLESS",
+        "🇩🇪 Germany · Frankfurt · SS",
+        "🇲🇽 Mexico · Monterrey · VLESS",
+        "🇨🇱 Chile · Valparaiso · VLESS",
+        "🇳🇱 Netherlands · Amsterdam · VLESS",
         "🇬🇧 United Kingdom · Cardiff · SS"
       ],
       "default": "👽 Anonymous Lantern 🌐"
@@ -59,10 +59,10 @@
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
         "🇺🇸 U.S.A. · Phoenix · SS",
-        "🇳🇱 Netherlands · Amsterdam · SS",
-        "🇧🇷 Brazil · São Paulo · SS",
-        "🇸🇪 Sweden · Stockholm · VLESS",
-        "🇮🇹 Italy · Milan · VLESS",
+        "🇩🇪 Germany · Frankfurt · SS",
+        "🇲🇽 Mexico · Monterrey · VLESS",
+        "🇨🇱 Chile · Valparaiso · VLESS",
+        "🇳🇱 Netherlands · Amsterdam · VLESS",
         "🇬🇧 United Kingdom · Cardiff · SS"
       ],
       "url": "https://www.gstatic.com/generate_204",
@@ -79,26 +79,18 @@
     },
     {
       "type": "shadowsocks",
-      "tag": "🇳🇱 Netherlands · Amsterdam · SS",
-      "server": "141.144.195.206",
-      "server_port": 45819,
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
+      "server": "92.5.156.71",
+      "server_port": 59924,
       "method": "2022-blake3-chacha20-poly1305",
-      "password": "rviccPvrrvB/ATFyChg0/Onws2hz6I87hjKLMhOFqow="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇧🇷 Brazil · São Paulo · SS",
-      "server": "163.176.112.145",
-      "server_port": 59319,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "Ic+OAC77+mKdy0qMwPPjzkeu5dXrNYYa+hCdEXx3P2U="
+      "password": "DW0wW0DWgRaAr1uQT7T+gvWkAmxO9kXizNTG9fCFVLo="
     },
     {
       "type": "vless",
-      "tag": "🇸🇪 Sweden · Stockholm · VLESS",
-      "server": "79.76.33.170",
-      "server_port": 59302,
-      "uuid": "f77dac6a-0c39-44cb-a12e-d453f685ca53",
+      "tag": "🇲🇽 Mexico · Monterrey · VLESS",
+      "server": "40.233.17.203",
+      "server_port": 61902,
+      "uuid": "f55b18a8-4845-45da-a4a9-dc5640aeb8c0",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -116,10 +108,31 @@
     },
     {
       "type": "vless",
-      "tag": "🇮🇹 Italy · Milan · VLESS",
-      "server": "172.235.237.26",
-      "server_port": 63326,
-      "uuid": "b415bd2f-2fbd-4202-8826-3eec2de7bc95",
+      "tag": "🇨🇱 Chile · Valparaiso · VLESS",
+      "server": "148.116.105.86",
+      "server_port": 58159,
+      "uuid": "b415bce6-33ad-443d-9b66-ec1d44242cdf",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.cloudflare.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
+          "short_id": "1f2519bb96e5589c"
+        }
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "🇳🇱 Netherlands · Amsterdam · VLESS",
+      "server": "193.123.39.151",
+      "server_port": 62765,
+      "uuid": "abd15f27-0ad8-4b8b-9f61-7a8533173518",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
