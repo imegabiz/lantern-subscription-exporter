@@ -40,19 +40,19 @@
     {
       "protocol": "shadowsocks",
       "settings": {
-        "address": "79.76.119.243",
-        "port": 59924,
+        "address": "47.85.238.210",
+        "port": 443,
         "method": "2022-blake3-chacha20-poly1305",
-        "password": "WwXT4USQ8MpbJA7ySwkheMVQHqTtQbTnS53lES1jqHE="
+        "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
       },
       "tag": "lantern-01-ss"
     },
     {
       "protocol": "vless",
       "settings": {
-        "address": "172.233.206.173",
-        "port": 64630,
-        "id": "10345360-a3de-451d-ad35-a78376c3451c",
+        "address": "82.158.120.124",
+        "port": 58218,
+        "id": "ed9e71f3-1781-400e-940d-fb05f80bae53",
         "encryption": "none",
         "flow": "xtls-rprx-vision"
       },
@@ -69,21 +69,11 @@
       "tag": "lantern-02-vless"
     },
     {
-      "protocol": "shadowsocks",
-      "settings": {
-        "address": "141.144.195.206",
-        "port": 45819,
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "rviccPvrrvB/ATFyChg0/Onws2hz6I87hjKLMhOFqow="
-      },
-      "tag": "lantern-03-ss"
-    },
-    {
       "protocol": "vless",
       "settings": {
-        "address": "158.179.205.178",
-        "port": 65446,
-        "id": "1852bf29-55ab-4e45-b7d2-8192573afa4f",
+        "address": "79.76.59.179",
+        "port": 61793,
+        "id": "a62920f2-0a35-47cf-a9f3-0527effc27fd",
         "encryption": "none",
         "flow": "xtls-rprx-vision"
       },
@@ -97,15 +87,25 @@
           "shortId": "1f2519bb96e5589c"
         }
       },
-      "tag": "lantern-04-vless"
+      "tag": "lantern-03-vless"
     },
     {
       "protocol": "shadowsocks",
       "settings": {
-        "address": "129.146.200.42",
-        "port": 50356,
+        "address": "51.170.184.57",
+        "port": 45819,
         "method": "2022-blake3-chacha20-poly1305",
-        "password": "1KRWYoNOBU1OXV+dLChiRageSP9uIRY2wsJPieRC7kY="
+        "password": "XraqA91x197xwkDucGKOg1x1KsVItRJjt/+T7N1ACaI="
+      },
+      "tag": "lantern-04-ss"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "129.151.82.249",
+        "port": 61312,
+        "method": "2022-blake3-chacha20-poly1305",
+        "password": "L35ZoQjjihDmVI3YcDK0UMgcjpoxdMtVDStV2NH74xw="
       },
       "tag": "lantern-05-ss"
     },
