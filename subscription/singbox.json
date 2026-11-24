@@ -45,12 +45,12 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
-        "🇲🇽 Mexico · Monterrey · VLESS",
-        "🇰🇿 Kazakhstan · Almaty · VLESS",
-        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇩🇪 Germany · Frankfurt · VLESS",
+        "🇨🇱 Chile · Valparaiso · VLESS",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇳🇱 Netherlands · Amsterdam · SS",
-        "🇧🇷 Brazil · São Paulo · SS"
+        "🇧🇷 Brazil · São Paulo · SS",
+        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇮🇹 Italy · Milan · VLESS"
       ],
       "default": "👽 Anonymous Lantern 🌐"
     },
@@ -58,12 +58,12 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
-        "🇲🇽 Mexico · Monterrey · VLESS",
-        "🇰🇿 Kazakhstan · Almaty · VLESS",
-        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇩🇪 Germany · Frankfurt · VLESS",
+        "🇨🇱 Chile · Valparaiso · VLESS",
         "🇩🇪 Germany · Frankfurt · SS",
-        "🇳🇱 Netherlands · Amsterdam · SS",
-        "🇧🇷 Brazil · São Paulo · SS"
+        "🇧🇷 Brazil · São Paulo · SS",
+        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇮🇹 Italy · Milan · VLESS"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
@@ -71,10 +71,10 @@
     },
     {
       "type": "vless",
-      "tag": "🇲🇽 Mexico · Monterrey · VLESS",
-      "server": "157.137.190.47",
-      "server_port": 59935,
-      "uuid": "3782e9d8-4867-44e4-9fae-401054d101ba",
+      "tag": "🇩🇪 Germany · Frankfurt · VLESS",
+      "server": "31.184.244.64",
+      "server_port": 59677,
+      "uuid": "229b98a5-9dc4-4509-ae29-a9043191b27e",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -92,10 +92,10 @@
     },
     {
       "type": "vless",
-      "tag": "🇰🇿 Kazakhstan · Almaty · VLESS",
-      "server": "83.229.15.64",
-      "server_port": 62769,
-      "uuid": "c31e2353-9c5a-49fc-98d7-bef99ab69cb6",
+      "tag": "🇨🇱 Chile · Valparaiso · VLESS",
+      "server": "155.181.37.142",
+      "server_port": 59647,
+      "uuid": "dd1389d1-2573-4a1d-bb35-96b4b05c855a",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -110,6 +110,22 @@
           "short_id": "1f2519bb96e5589c"
         }
       }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
+      "server": "47.85.227.36",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇧🇷 Brazil · São Paulo · SS",
+      "server": "147.15.80.3",
+      "server_port": 59319,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "hIWVDtbW3NKbmoXqMH41bGryvXGmNPVir0/4TTGLYMM="
     },
     {
       "type": "shadowsocks",
@@ -120,28 +136,25 @@
       "password": "hRfh0gozaXToHvZTW3st6Jkklq11LFB0CBZFmRThhPw="
     },
     {
-      "type": "shadowsocks",
-      "tag": "🇩🇪 Germany · Frankfurt · SS",
-      "server": "47.85.238.210",
-      "server_port": 443,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇳🇱 Netherlands · Amsterdam · SS",
-      "server": "143.47.178.57",
-      "server_port": 45819,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "QD+n9lC76CMBJ2NdgImhw0MStoC/gxXMRd50OUjbY3M="
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇧🇷 Brazil · São Paulo · SS",
-      "server": "147.15.80.3",
-      "server_port": 59319,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "hIWVDtbW3NKbmoXqMH41bGryvXGmNPVir0/4TTGLYMM="
+      "type": "vless",
+      "tag": "🇮🇹 Italy · Milan · VLESS",
+      "server": "172.235.237.9",
+      "server_port": 58887,
+      "uuid": "73287568-abd1-46d5-bf66-8203af317379",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.cloudflare.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
+          "short_id": "1f2519bb96e5589c"
+        }
+      }
     },
     {
       "type": "direct",
