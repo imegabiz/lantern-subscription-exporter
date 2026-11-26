@@ -45,12 +45,12 @@
       "tag": "👽 Anonymous Lantern 🚀",
       "outbounds": [
         "👽 Anonymous Lantern 🌐",
-        "🇮🇹 Italy · Milan · VLESS",
-        "🇺🇸 U.S.A. · Phoenix · SS",
         "🇳🇱 Netherlands · Amsterdam · VLESS",
-        "🇨🇱 Chile · Valparaiso · VLESS",
-        "🇧🇷 Brazil · São Paulo · SS",
-        "🇸🇪 Sweden · Stockholm · VLESS"
+        "🇩🇪 Germany · Frankfurt · VLESS",
+        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇺🇸 U.S.A. · Phoenix · SS",
+        "🇩🇪 Germany · Frankfurt · SS",
+        "🇧🇷 Brazil · São Paulo · SS"
       ],
       "default": "👽 Anonymous Lantern 🌐"
     },
@@ -58,45 +58,16 @@
       "type": "urltest",
       "tag": "👽 Anonymous Lantern 🌐",
       "outbounds": [
-        "🇮🇹 Italy · Milan · VLESS",
-        "🇺🇸 U.S.A. · Phoenix · SS",
         "🇳🇱 Netherlands · Amsterdam · VLESS",
-        "🇨🇱 Chile · Valparaiso · VLESS",
-        "🇧🇷 Brazil · São Paulo · SS",
-        "🇸🇪 Sweden · Stockholm · VLESS"
+        "🇩🇪 Germany · Frankfurt · VLESS",
+        "🇬🇧 United Kingdom · Cardiff · SS",
+        "🇺🇸 U.S.A. · Phoenix · SS",
+        "🇩🇪 Germany · Frankfurt · SS",
+        "🇧🇷 Brazil · São Paulo · SS"
       ],
       "url": "https://www.gstatic.com/generate_204",
       "interval": "3m",
       "tolerance": 50
-    },
-    {
-      "type": "vless",
-      "tag": "🇮🇹 Italy · Milan · VLESS",
-      "server": "172.232.221.17",
-      "server_port": 60526,
-      "uuid": "34f9cb12-4c03-4d46-8274-6739f8ac2afb",
-      "flow": "xtls-rprx-vision",
-      "tls": {
-        "enabled": true,
-        "server_name": "www.cloudflare.com",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
-          "short_id": "1f2519bb96e5589c"
-        }
-      }
-    },
-    {
-      "type": "shadowsocks",
-      "tag": "🇺🇸 U.S.A. · Phoenix · SS",
-      "server": "132.226.86.62",
-      "server_port": 50356,
-      "method": "2022-blake3-chacha20-poly1305",
-      "password": "lkKN8MCDiBp/rKGK3MVfE5kTNof2DRngYnYqLTeRWL0="
     },
     {
       "type": "vless",
@@ -121,10 +92,10 @@
     },
     {
       "type": "vless",
-      "tag": "🇨🇱 Chile · Valparaiso · VLESS",
-      "server": "147.224.237.105",
-      "server_port": 64832,
-      "uuid": "e1f2ec5a-f506-49ec-91c8-fd82043156dd",
+      "tag": "🇩🇪 Germany · Frankfurt · VLESS",
+      "server": "82.158.120.57",
+      "server_port": 61515,
+      "uuid": "7fa589cc-16eb-4136-ac3e-2a672a8e24e9",
       "flow": "xtls-rprx-vision",
       "tls": {
         "enabled": true,
@@ -142,32 +113,35 @@
     },
     {
       "type": "shadowsocks",
+      "tag": "🇬🇧 United Kingdom · Cardiff · SS",
+      "server": "129.151.69.61",
+      "server_port": 61312,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "3hayl3vHIcTFQLs/0vh1RCYTCyCAcGuK6l7zHIA+Lbo="
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇺🇸 U.S.A. · Phoenix · SS",
+      "server": "132.226.86.62",
+      "server_port": 50356,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "lkKN8MCDiBp/rKGK3MVfE5kTNof2DRngYnYqLTeRWL0="
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "🇩🇪 Germany · Frankfurt · SS",
+      "server": "47.85.98.222",
+      "server_port": 443,
+      "method": "2022-blake3-chacha20-poly1305",
+      "password": "3NBsnBLanPfG6i3S2GTHineswr6EeSJPb0PCeMQoGoA="
+    },
+    {
+      "type": "shadowsocks",
       "tag": "🇧🇷 Brazil · São Paulo · SS",
       "server": "147.15.115.239",
       "server_port": 59319,
       "method": "2022-blake3-chacha20-poly1305",
       "password": "ufRQNoVmSBchwcY7p814u5uoMZKgu/hJMN9RgfLrR7I="
-    },
-    {
-      "type": "vless",
-      "tag": "🇸🇪 Sweden · Stockholm · VLESS",
-      "server": "158.179.205.156",
-      "server_port": 63682,
-      "uuid": "cc2c2d67-b0f6-4a9b-9e4c-a3313fdb97a7",
-      "flow": "xtls-rprx-vision",
-      "tls": {
-        "enabled": true,
-        "server_name": "www.cloudflare.com",
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": "U7t4RFE9MSMtC-o1DoJ8pYzKMfgVpTg6ZhTTknBrVkU",
-          "short_id": "1f2519bb96e5589c"
-        }
-      }
     },
     {
       "type": "direct",
